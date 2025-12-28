@@ -29,4 +29,13 @@ public class AuthController {
 						AuthResponse.builder().message(e.getMessage()).build()
 						)));
 	}
+	
+	@PostMapping("/login")
+	public Mono<ResponseEntity<AuthResponse>> login(@RequestBody AuthRequest request) {
+		return authService.login(request)
+				.map(response-> ResponseEntity.ok(response))
+				.onErrorResume(e-> Mono.just(ResponseEntity.status(401).body(
+						AuthResponse.builder().message(e.getMessage()).build()
+						)));
+	}
 }
