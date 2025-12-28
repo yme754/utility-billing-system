@@ -15,7 +15,7 @@ public class ConnectionDTO {
 	private String id;
 	private String consumerId;
 	private String utilityType;
-	private String tarrifCategory;
+	private String tariffCategory;
 	private String meterNumber;
 	private LocalDate connectionDate;
 	private String status;
