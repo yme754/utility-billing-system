@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,22 +33,11 @@ public class AuthController {
 	@PostMapping("/register")
 	public Mono<ResponseEntity<AuthResponse>> register(@Valid @RequestBody AuthRequest request) {
 		return authService.register(request)
-				.map(response-> ResponseEntity.ok(response))
+				.map(response -> ResponseEntity.ok(response))
 				.onErrorResume(ResponseStatusException.class, e -> Mono.just(
 						ResponseEntity.status(e.getStatusCode())
 						.body(AuthResponse.builder().message(e.getReason()).build())
-						))
-				.onErrorResume(WebExchangeBindException.class, e -> {
-					String errors = e.getBindingResult().getAllErrors().stream()
-							.map(DefaultMessageSourceResolvable::getDefaultMessage)
-							.collect(Collectors.joining(", "));
-					return Mono.just(ResponseEntity.badRequest().body(AuthResponse.builder()
-							.message(errors).build()));
-				})
-				.onErrorResume(Exception.class, e -> Mono.just(
-						ResponseEntity.internalServerError().body(AuthResponse.builder()
-						.message("An unexpected error occured").build()))
-						);
+				));
 	}
 	
 	@PostMapping("/login")
@@ -61,8 +51,15 @@ public class AuthController {
 	
 	@GetMapping("/validate")
 	public Mono<String> validateToken(@RequestParam("token") String token) {
-		if(jwtUtil.validateToken(token)) 
-			return Mono.just("VALID");
-		else return Mono.just("INVALID");
+		return Mono.just(jwtUtil.validateToken(token) ? "VALID" : "INVALID");
+	}
+	
+	@ExceptionHandler(WebExchangeBindException.class)
+	public ResponseEntity<AuthResponse> handleValidationErrors(WebExchangeBindException ex) {
+		String errorMsg = ex.getBindingResult().getAllErrors().stream()
+				.map(DefaultMessageSourceResolvable::getDefaultMessage)
+				.collect(Collectors.joining(", "));
+		return ResponseEntity.badRequest().body(AuthResponse.builder()
+				.message(errorMsg).build());
 	}
 }
