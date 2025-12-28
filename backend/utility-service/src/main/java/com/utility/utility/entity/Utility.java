@@ -12,6 +12,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "utilities")
 public class Utility {
 	@Id
 	private String Id;
