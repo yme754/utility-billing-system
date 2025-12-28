@@ -26,17 +26,26 @@ public class AuthService {
 	public Mono<AuthResponse> register(AuthRequest request) {
 		return userRepo.findByUsername(request.getUsername())
 				.flatMap(existing -> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "User already exists")))
-				.switchIfEmpty(userRepo.findByEmail(request.getEmail())
+				.switchIfEmpty(Mono.defer(() -> 
+					userRepo.findByEmail(request.getEmail())
 						.flatMap(existing -> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists")))
-						.switchIfEmpty(Mono.defer(() -> {
-							User newUser = User.builder().username(request.getUsername()).email(request.getEmail())
-									.password(passwordEncoder.encode(request.getPassword())).roles(List.of("ROLE_CONSUMER"))
-									.active(true).build();
-							return userRepo.save(newUser);
-						})))
-				.cast(User.class).map(savedUser ->
-				AuthResponse.builder().userId(savedUser.getId())
-				.message("User registered successfully").role("ROLE_CONSUMER").build());
+				))
+				.switchIfEmpty(Mono.defer(() -> {
+					User newUser = User.builder()
+							.username(request.getUsername())
+							.email(request.getEmail())
+							.password(passwordEncoder.encode(request.getPassword()))
+							.roles(List.of("ROLE_CONSUMER"))
+							.active(true)
+							.build();
+					return userRepo.save(newUser);
+				}))
+				.cast(User.class)
+				.map(savedUser -> AuthResponse.builder()
+						.userId(savedUser.getId())
+						.message("User registered successfully")
+						.role("ROLE_CONSUMER")
+						.build());
 	}
 	
 	public Mono<AuthResponse> login(AuthRequest request) {
