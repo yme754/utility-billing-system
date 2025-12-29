@@ -27,5 +27,6 @@ public class Bill {
 	private Double amount;
 	private Double taxAmount;
 	private Double totalAmount;
+	private Double unitsConsumed;
 	private String status;
 }
