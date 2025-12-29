@@ -1,6 +1,8 @@
 package com.utility.billing.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,5 +24,10 @@ public class BillingController {
 	public Mono<ResponseEntity<Bill>> generateBill(@RequestParam String connectionId,
 			@RequestParam String meterId, @RequestParam String utiltyName) {
 		return billingService.generateBill(connectionId, meterId, utiltyName).map(ResponseEntity::ok);
+	}
+	
+	@GetMapping("/{id}")
+	public Mono<ResponseEntity<Bill>> getBill(@PathVariable String id) {
+		return billingService.getBill(id).map(ResponseEntity::ok);
 	}
 }
