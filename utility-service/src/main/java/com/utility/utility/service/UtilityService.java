@@ -7,7 +7,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface UtilityService {
-	public Flux<Utility> getAllUtilities();
-	public Mono<Tariff> addTariff(Tariff tariff);
-	public Flux<Tariff> getTariffsByutility(String utilityName);
+	Flux<Utility> getAllUtilities();
+	Mono<Tariff> addTariff(Tariff tariff);
+	Flux<Tariff> getTariffsByutility(String utilityName);
 }
