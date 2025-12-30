@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.utility.billing.dto.AdminStatsDTO;
 import com.utility.billing.dto.MeterReadingDTO;
 import com.utility.billing.dto.TariffDTO;
 import com.utility.billing.entity.Bill;
@@ -15,6 +16,7 @@ import com.utility.billing.repository.BillRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -81,5 +83,34 @@ public class BillingServiceImpl implements BillingService{
 					bill.setStatus(status);
 					return billRepo.save(bill);
 				}).then();
+	}
+
+	@Override
+	public Flux<Bill> getPendingBills() {
+		return billRepo.findByStatus("UNPAID");
+	}
+
+	@Override
+	public Flux<Bill> getBillsByConnection(String connectionId) {
+		return billRepo.findByConnectionId(connectionId);
+	}
+
+	@Override
+	public Mono<AdminStatsDTO> getAdminStats() {
+		Mono<Long> consumerCountMono = webClientBuilder.build().get()
+                .uri("http://CONSUMER-SERVICE/consumers/count")
+                .retrieve()
+                .bodyToMono(Long.class)
+                .onErrorReturn(0L);
+        Mono<Long> pendingBillsMono = billRepo.countByStatus("UNPAID");
+        Mono<Double> revenueMono = billRepo.sumTotalRevenue()
+                .map(BillRepository.RevenueResult::getTotal)
+                .defaultIfEmpty(0.0);
+        return Mono.zip(consumerCountMono, revenueMono, pendingBillsMono)
+                .map(tuple -> AdminStatsDTO.builder()
+                        .totalConsumers(tuple.getT1())
+                        .totalRevenue(tuple.getT2())
+                        .pendingBills(tuple.getT3())
+                        .build());
 	}
 }

@@ -14,6 +14,7 @@ import com.utility.billing.entity.Bill;
 import com.utility.billing.service.BillingService;
 
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -41,4 +42,16 @@ public class BillingController {
 		return billingService.updateBillStatus(id, status)
                 .map(v -> ResponseEntity.ok().<Void>build());
 	}
+	
+	@GetMapping("/pending")
+    @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
+    public Mono<ResponseEntity<Flux<Bill>>> getPendingBills() {
+        return Mono.just(ResponseEntity.ok(billingService.getPendingBills()));
+    }
+
+    @GetMapping("/my-bills/{connectionId}")
+    @PreAuthorize("hasAnyRole('CONSUMER', 'ADMIN')")
+    public Mono<ResponseEntity<Flux<Bill>>> getMyBills(@PathVariable String connectionId) {
+        return Mono.just(ResponseEntity.ok(billingService.getBillsByConnection(connectionId)));
+    }
 }
