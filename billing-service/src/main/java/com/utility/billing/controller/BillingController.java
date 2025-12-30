@@ -42,7 +42,7 @@ public class BillingController {
 	}
 	
 	@PutMapping("/{id}/status")
-	@PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNTS_OFFICER')")
+	@PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNTS_OFFICER', 'CONSUMER')")
 	public Mono<ResponseEntity<Void>> updateBillStatus(@PathVariable String id, @RequestParam String status) {
 		return billingService.updateBillStatus(id, status)
                 .map(v -> ResponseEntity.ok().<Void>build());
