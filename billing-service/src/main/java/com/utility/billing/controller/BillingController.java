@@ -27,8 +27,8 @@ public class BillingController {
 	
 	@PostMapping("/generate")
 	public Mono<ResponseEntity<Bill>> generateBill(@RequestParam String connectionId,
-			@RequestParam String meterId, @RequestParam String utiltyName) {
-		return billingService.generateBill(connectionId, meterId, utiltyName).map(ResponseEntity::ok);
+			@RequestParam String meterId, @RequestParam String utilityName) {
+		return billingService.generateBill(connectionId, meterId, utilityName).map(ResponseEntity::ok);
 	}
 	
 	@GetMapping("/{id}")
