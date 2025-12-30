@@ -1,5 +1,6 @@
 package com.utility.notification.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ public class NotificationController {
 	private final EmailService emailService;
 	
 	@PostMapping("/send")
+	@PreAuthorize("hasRole('ADMIN')")
 	public String sendTestEmail(@RequestBody EmailRequest request) {
 		emailService.sendEmail(request);
 		return "Email request processed";

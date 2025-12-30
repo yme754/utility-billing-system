@@ -2,6 +2,7 @@ package com.utility.notification.service;
 
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 
 import com.utility.notification.dto.EmailRequest;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@EnableReactiveMethodSecurity
 public class EmailServiceImpl implements EmailService{
 	private final JavaMailSender javaMailSender;
 	
