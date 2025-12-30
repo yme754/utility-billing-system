@@ -62,4 +62,10 @@ public class ConsumerController {
     public Mono<ResponseEntity<Flux<ConsumerDTO>>> getAllConsumers() {
         return Mono.just(ResponseEntity.ok(consumerService.getAllConsumers()));
     }
+	
+	@GetMapping("/count")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
+    public Mono<Long> getConsumerCount() {
+        return consumerService.getAllConsumers().count();
+    }
 }
