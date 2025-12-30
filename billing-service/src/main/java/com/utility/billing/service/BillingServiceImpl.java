@@ -2,6 +2,7 @@ package com.utility.billing.service;
 
 import java.time.LocalDate;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
@@ -28,47 +29,57 @@ public class BillingServiceImpl implements BillingService{
 	private final BillRepository billRepo;
 	
 	@Override
-	public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName) {
-		log.info("Generating bill for Meter: {}, Utility: {}", meterId, utilityName);
-		Mono<MeterReadingDTO> readingMono = webClientBuilder.build().get()
-				.uri("http://METER-SERVICE/readings/" + meterId).retrieve()
-				.bodyToFlux(MeterReadingDTO.class)
-				.last()
-				.switchIfEmpty(Mono.error(
-				        new ResponseStatusException(HttpStatus.NOT_FOUND,
-				        		"Meter reading not found for: " + meterId)
-				));
-		Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
-				.uri("http://UTILITY-SERVICE/utilities/tariffs?type=" + utilityName)
-				.retrieve()
-				.bodyToFlux(TariffDTO.class)
-				.next()
-				.switchIfEmpty(Mono.error(
-				        new ResponseStatusException(HttpStatus.NOT_FOUND,
-				                "No Tariff found for utility: " + utilityName)
-				));		
-		return Mono.zip(readingMono, tariffMono).flatMap(tuple-> {
-			MeterReadingDTO meterReading = tuple.getT1();
-			TariffDTO tariff = tuple.getT2();
-			double units = meterReading.getUnitsConsumed();
-			double rate = tariff.getSlabs().stream()
-					.filter(slab-> units >= slab.getMinUnits() && units<= slab.getMaxUnits())
-					.findFirst()
-					.map(TariffDTO.Slab::getRatePerUnit)
-					.orElseThrow(() -> new ResponseStatusException(
-					        HttpStatus.BAD_REQUEST,
-					        "No slab found for units: " + units
-					));
-			double energyCharge = units*rate;
-			double tax = (energyCharge + tariff.getFixedCharge())*(tariff.getTaxPercentage()/100);
-			double total = energyCharge + tariff.getFixedCharge()+ tax;
-			Bill bill = Bill.builder().connectionId(connectionId).meterId(meterId)
-					.billingDate(LocalDate.now()).dueDate(LocalDate.now().plusDays(15))
-					.unitsConsumed(units).ratePerUnit(rate).fixedCharge(tariff.getFixedCharge())
-					.taxAmount(tax).amount(energyCharge).totalAmount(total).status("UNPAID").build();
-			return billRepo.save(bill);
-		});
-	}
+    public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token) {
+        log.info("Generating bill for Meter: {}, Utility: {}", meterId, utilityName);
+        Mono<MeterReadingDTO> readingMono = webClientBuilder.build().get()
+                .uri("http://METER-SERVICE/readings/" + meterId)
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToFlux(MeterReadingDTO.class)
+                .last()
+                .onErrorResume(e -> {
+                    log.error("Error fetching reading: {}", e.getMessage());
+                    return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Meter reading not found"));
+                });
+        Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
+                .uri("http://UTILITY-SERVICE/utilities/tariffs?type=" + utilityName)
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToFlux(TariffDTO.class)
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Tariff found")))
+                .onErrorResume(e -> {
+                    log.error("Error fetching tariff: {}", e.getMessage());
+                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to fetch tariff"));
+                });
+        return Mono.zip(readingMono, tariffMono).flatMap(tuple -> {
+             MeterReadingDTO reading = tuple.getT1();
+             TariffDTO tariff = tuple.getT2();
+             double units = reading.getUnitsConsumed();
+             double rate = tariff.getSlabs().stream()
+                    .filter(slab -> units >= slab.getMinUnits() && units <= slab.getMaxUnits())
+                    .findFirst()
+                    .map(TariffDTO.Slab::getRatePerUnit)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No slab found"));
+            double energyCharge = units * rate;
+            double tax = (energyCharge + tariff.getFixedCharge()) * (tariff.getTaxPercentage() / 100);
+            double total = energyCharge + tariff.getFixedCharge() + tax;
+            Bill bill = Bill.builder()
+                    .connectionId(connectionId)
+                    .meterId(meterId)
+                    .billingDate(LocalDate.now())
+                    .dueDate(LocalDate.now().plusDays(15))
+                    .unitsConsumed(units)
+                    .ratePerUnit(rate)
+                    .fixedCharge(tariff.getFixedCharge())
+                    .taxAmount(tax)
+                    .amount(energyCharge)
+                    .totalAmount(total)
+                    .status("UNPAID")
+                    .build();
+            return billRepo.save(bill);
+        });
+    }
 	
 	@Override
 	public Mono<Bill> getBill(String billId) {

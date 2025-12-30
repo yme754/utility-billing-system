@@ -7,7 +7,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface BillingService {
-	Mono<Bill> generateBill(String connectionId, String meterId, String utilityName);
+	Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token);
 	Mono<Bill> getBill(String billId);
 	Mono<Void> updateBillStatus(String id, String status);
 	Flux<Bill> getPendingBills();
