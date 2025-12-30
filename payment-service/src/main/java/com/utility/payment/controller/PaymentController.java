@@ -1,6 +1,7 @@
 package com.utility.payment.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ public class PaymentController {
 	private final PaymentService paymentService;
 	
 	@PostMapping("/pay")
+	@PreAuthorize("hasRole('CONSUMER')")
 	public Mono<ResponseEntity<Payment>> makePayment(@RequestBody Payment payment) {
 		return paymentService.processPayment(payment).map(ResponseEntity::ok);
 	}

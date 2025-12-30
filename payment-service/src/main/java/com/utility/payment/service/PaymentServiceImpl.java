@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -20,6 +21,7 @@ import reactor.core.publisher.Mono;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@EnableReactiveMethodSecurity
 public class PaymentServiceImpl implements PaymentService{
 	private final PaymentRepository paymentRepo;
 	private final WebClient.Builder webClientBuilder;
