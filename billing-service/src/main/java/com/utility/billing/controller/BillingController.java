@@ -1,7 +1,7 @@
 package com.utility.billing.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.utility.billing.entity.Bill;
-import com.utility.billing.repository.BillRepository;
 import com.utility.billing.service.BillingService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,27 +21,24 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class BillingController {
 	private final BillingService billingService;
-	@Autowired
-	private BillRepository billRepo;
 	
 	@PostMapping("/generate")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
 	public Mono<ResponseEntity<Bill>> generateBill(@RequestParam String connectionId,
 			@RequestParam String meterId, @RequestParam String utilityName) {
 		return billingService.generateBill(connectionId, meterId, utilityName).map(ResponseEntity::ok);
 	}
 	
 	@GetMapping("/{id}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
 	public Mono<ResponseEntity<Bill>> getBill(@PathVariable String id) {
 		return billingService.getBill(id).map(ResponseEntity::ok);
 	}
 	
 	@PutMapping("/{id}/status")
+	@PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNTS_OFFICER')")
 	public Mono<ResponseEntity<Void>> updateBillStatus(@PathVariable String id, @RequestParam String status) {
-		return billRepo.findById(id).flatMap(bill -> {
-			bill.setStatus(status);
-			return billRepo.save(bill);
-		})
-				.map(updated -> ResponseEntity.ok().<Void>build())
-				.defaultIfEmpty(ResponseEntity.notFound().build());
+		return billingService.updateBillStatus(id, status)
+                .map(v -> ResponseEntity.ok().<Void>build());
 	}
 }

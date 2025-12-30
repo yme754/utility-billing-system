@@ -3,6 +3,7 @@ package com.utility.billing.service;
 import java.time.LocalDate;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +20,7 @@ import reactor.core.publisher.Mono;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@EnableReactiveMethodSecurity
 public class BillingServiceImpl implements BillingService{
 	private final WebClient.Builder webClientBuilder;
 	private final BillRepository billRepo;
