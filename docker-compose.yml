@@ -2,14 +2,14 @@ version: "3.8"
 
 services:  
   mongo:
-    image: mongo:latest
+    image: mongo:8.2
     container_name: mongo
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' | grep 1"]
       interval: 10s
       timeout: 5s
       retries: 5
