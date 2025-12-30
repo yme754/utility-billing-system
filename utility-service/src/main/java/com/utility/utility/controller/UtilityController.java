@@ -1,5 +1,6 @@
 package com.utility.utility.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,7 @@ public class UtilityController {
 	}
 	
 	@PostMapping("/tariffs")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
 	public Mono<Tariff> createTariff(@RequestBody Tariff tariff) {
 		return utilityService.addTariff(tariff);
 	}

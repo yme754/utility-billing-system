@@ -1,6 +1,7 @@
 package com.utility.utility.service;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
+@EnableReactiveMethodSecurity
 public class UtilityServiceImpl implements UtilityService{
 	private final UtilityRepository utilityRepo;
 	private final TariffRepository tariffRepo;
