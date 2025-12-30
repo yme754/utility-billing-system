@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,6 +56,7 @@ public class AuthController {
 	}
 	
 	@PostMapping("/create-staff")
+	@PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<AuthResponse>> createStaff(
             @RequestBody AuthRequest request,
             @RequestParam String role) {      
