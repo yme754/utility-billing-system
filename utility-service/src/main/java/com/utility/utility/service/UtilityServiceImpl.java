@@ -1,6 +1,8 @@
 package com.utility.utility.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.utility.entity.Tariff;
 import com.utility.utility.entity.Utility;
@@ -24,7 +26,9 @@ public class UtilityServiceImpl implements UtilityService{
 	
 	@Override
 	public Mono<Tariff> addTariff(Tariff tariff) {
-		return tariffRepo.save(tariff);
+		return tariffRepo.findByName(tariff.getName())
+                .flatMap(existing -> Mono.<Tariff>error(new ResponseStatusException(HttpStatus.CONFLICT, "Tariff with this name already exists")))
+                .switchIfEmpty(tariffRepo.save(tariff));
 	}
 	
 	@Override
