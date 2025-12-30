@@ -22,15 +22,16 @@ public class SecurityConfig {
     	return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)                
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
                 .authenticationManager(authenticationManager)
-                .securityContextRepository(securityContextRepository)                
+                .securityContextRepository(securityContextRepository)
                 .authorizeExchange(exchanges -> exchanges
-                    .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
-                    .pathMatchers("/actuator/**").permitAll()                    
-                    .anyExchange().authenticated())
+                    .pathMatchers("/auth/login", "/auth/register", "/auth/validate", "/actuator/**").permitAll()                    
+                    .pathMatchers("/auth/create-staff").hasRole("ADMIN")
+                    .anyExchange().authenticated()
+                )
                 .build();
-	}
+        }
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {

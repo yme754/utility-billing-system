@@ -66,6 +66,9 @@ public class AuthServiceImpl implements AuthService{
 			return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role"));
 		return userRepo.findByUsername(request.getUsername())
 				.flatMap(existing-> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists")))
+				.switchIfEmpty(userRepo.findByEmail(request.getEmail())
+                        .flatMap(existing -> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists")))
+                )
 				.switchIfEmpty(Mono.defer(() -> {
 					User staffUser = User.builder().username(request.getUsername())
 							.email(request.getEmail()).password(passwordEncoder.encode(request.getPassword()))
