@@ -6,6 +6,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface PaymentService {
-	Mono<Payment> processPayment(Payment payment);
+	Mono<Payment> processPayment(Payment payment, String token);
 	Flux<Payment> getSuccessfulPayments();
 }

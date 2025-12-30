@@ -3,6 +3,7 @@ package com.utility.payment.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
@@ -29,19 +30,26 @@ public class PaymentServiceImpl implements PaymentService{
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	
 	@Override
-	public Mono<Payment> processPayment(Payment payment) {
-		return webClientBuilder.build().get()
-				.uri("http://BILLING-SERVICE/bills/" + payment.getBillId())
-				.retrieve().bodyToMono(BillDTO.class).flatMap(bill -> {
-					payment.setAmount(bill.getTotalAmount());
-					payment.setStatus("SUCCESS");
-					payment.setTransactionId(UUID.randomUUID().toString());
-					payment.setPaymentDate(LocalDateTime.now());
-					return paymentRepo.save(payment).flatMap(savedPayment -> 
-					webClientBuilder.build().put()
-					.uri("http://BILLING-SERVICE/bills/"+ payment.getBillId() + "/status?status=PAID")
-					.retrieve().bodyToMono(Void.class).then(Mono.just(savedPayment))
-					).doOnSuccess(p -> {
+	public Mono<Payment> processPayment(Payment payment, String token) {
+		log.info("Processing payment for billId: {}", payment.getBillId());
+        return webClientBuilder.build().get()
+                .uri("http://BILLING-SERVICE/bills/" + payment.getBillId())
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToMono(BillDTO.class)
+                .flatMap(bill -> {
+                    payment.setAmount(bill.getTotalAmount());
+                    payment.setStatus("SUCCESS");
+                    payment.setTransactionId(UUID.randomUUID().toString());
+                    payment.setPaymentDate(LocalDateTime.now());                    
+                    return paymentRepo.save(payment).flatMap(savedPayment -> 
+                        webClientBuilder.build().put()
+                                .uri("http://BILLING-SERVICE/bills/" + payment.getBillId() + "/status?status=PAID")
+                                .header(HttpHeaders.AUTHORIZATION, token)
+                                .retrieve()
+                                .bodyToMono(Void.class)
+                                .then(Mono.just(savedPayment))
+                    ).doOnSuccess(p -> {
                         log.info("Sending Payment Notification for Bill: {}", p.getBillId());
                         EmailRequest email = new EmailRequest(
                                 "user@example.com",
@@ -51,7 +59,7 @@ public class PaymentServiceImpl implements PaymentService{
                         kafkaTemplate.send("notification-topic", email);
                     });
                 });
-	}
+    }
 	
 	@Override
     public Flux<Payment> getSuccessfulPayments() {
