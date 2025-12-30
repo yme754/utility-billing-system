@@ -16,6 +16,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -27,6 +28,7 @@ public class PaymentServiceImpl implements PaymentService{
 	private final WebClient.Builder webClientBuilder;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	
+	@Override
 	public Mono<Payment> processPayment(Payment payment) {
 		return webClientBuilder.build().get()
 				.uri("http://BILLING-SERVICE/bills/" + payment.getBillId())
@@ -50,6 +52,11 @@ public class PaymentServiceImpl implements PaymentService{
                     });
                 });
 	}
+	
+	@Override
+    public Flux<Payment> getSuccessfulPayments() {
+        return paymentRepo.findByStatus("SUCCESS");
+    }
 	
 	@Data
 	static class BillDTO {
