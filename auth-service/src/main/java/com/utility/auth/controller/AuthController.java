@@ -57,11 +57,8 @@ public class AuthController {
 	
 	@PostMapping("/create-staff")
 	@PreAuthorize("hasRole('ADMIN')")
-    public Mono<ResponseEntity<AuthResponse>> createStaff(
-            @RequestBody AuthRequest request,
-            @RequestParam String role) {      
-        return authService.createStaff(request, role)
-                .map(ResponseEntity::ok);
+    public Mono<ResponseEntity<AuthResponse>> createStaff(@RequestBody AuthRequest request) {      
+		return authService.createStaff(request, null).map(ResponseEntity::ok);
     }
 	
 	@ExceptionHandler(WebExchangeBindException.class)
