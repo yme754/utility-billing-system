@@ -10,12 +10,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.utility.payment.entity.Payment;
 import com.utility.payment.repository.PaymentRepository;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl implements PaymentService{
 	private final PaymentRepository paymentRepo;
 	private final WebClient.Builder webClientBuilder;
@@ -31,12 +35,18 @@ public class PaymentServiceImpl implements PaymentService{
 					payment.setPaymentDate(LocalDateTime.now());
 					return paymentRepo.save(payment).flatMap(savedPayment -> 
 					webClientBuilder.build().put()
-					.uri("http://BILLING-SERVICE/bills/"+ payment.getBillId() + "/status?status?PAID")
+					.uri("http://BILLING-SERVICE/bills/"+ payment.getBillId() + "/status?status=PAID")
 					.retrieve().bodyToMono(Void.class).then(Mono.just(savedPayment))
 					).doOnSuccess(p -> {
-						System.out.println("Payment Event Sent to Kafka for Bill: "+p.getBillId());
-					});
-				});
+                        log.info("Sending Payment Notification for Bill: {}", p.getBillId());
+                        EmailRequest email = new EmailRequest(
+                                "user@example.com",
+                                "Payment Successful",
+                                "Your payment of $" + p.getAmount() + " for Bill " + p.getBillId() + " was successful. Trans ID: " + p.getTransactionId()
+                        );
+                        kafkaTemplate.send("notification-topic", email);
+                    });
+                });
 	}
 	
 	@Data
@@ -44,5 +54,14 @@ public class PaymentServiceImpl implements PaymentService{
 		private String id;
 		private Double totalAmount;
 		private String status;
+	}
+	
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	static class EmailRequest {
+		private String to;
+		private String subject;
+		private String body;
 	}
 }
