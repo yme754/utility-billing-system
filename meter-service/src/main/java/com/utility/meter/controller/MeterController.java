@@ -1,6 +1,7 @@
 package com.utility.meter.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,11 +23,13 @@ public class MeterController {
 	private final MeterService meterService;
 	
 	@PostMapping
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
 	public Mono<ResponseEntity<MeterReading>> addReading(@RequestBody MeterReading meterReading) {
 		return meterService.addReading(meterReading).map(ResponseEntity::ok);
 	}
 	
 	@GetMapping("/{meterId}")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
 	public Flux<MeterReading> getHistory(@PathVariable String meterId) {
 		return meterService.getReadingsByMeter(meterId);
 	}
