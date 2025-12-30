@@ -33,20 +33,20 @@ public class AuthServiceImpl implements AuthService{
 				))
 				.switchIfEmpty(Mono.defer(() -> {
 					User newUser = User.builder()
-							.username(request.getUsername())
-							.email(request.getEmail())
-							.password(passwordEncoder.encode(request.getPassword()))
-							.roles(List.of("ROLE_CONSUMER"))
-							.active(true)
-							.build();
+                            .username(request.getUsername())
+                            .email(request.getEmail())
+                            .password(passwordEncoder.encode(request.getPassword()))
+                            .roles(List.of("ROLE_CONSUMER")) 
+                            .active(true)
+                            .build();
 					return userRepo.save(newUser);
 				}))
 				.cast(User.class)
 				.map(savedUser -> AuthResponse.builder()
-						.userId(savedUser.getId())
-						.message("User registered successfully")
-						.role("ROLE_CONSUMER")
-						.build());
+                        .userId(savedUser.getId())
+                        .message("User registered successfully")
+                        .role("ROLE_CONSUMER")
+                        .build());
 	}
 	
 	@Override
@@ -61,24 +61,29 @@ public class AuthServiceImpl implements AuthService{
 	
 	@Override
 	public Mono<AuthResponse> createStaff(AuthRequest request, String roleName) {
-		List<String> allowedRoles = List.of("ROLE_BILLING_OFFICER", "ROLE_ACCOUNTS_OFFICER");
-		if(!allowedRoles.contains(roleName))
-			return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role"));
+		List<String> rolesToAssign = request.getRoles();
+		if(rolesToAssign == null || rolesToAssign.isEmpty())
+			return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Roles must be provided in body"));
 		return userRepo.findByUsername(request.getUsername())
 				.flatMap(existing-> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username already exists")))
 				.switchIfEmpty(userRepo.findByEmail(request.getEmail())
                         .flatMap(existing -> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists")))
                 )
 				.switchIfEmpty(Mono.defer(() -> {
-					User staffUser = User.builder().username(request.getUsername())
-							.email(request.getEmail()).password(passwordEncoder.encode(request.getPassword()))
-							.roles(List.of(roleName)).active(true).build();
-					return userRepo.save(staffUser);
-				}))
+                    User staffUser = User.builder()
+                            .username(request.getUsername())
+                            .email(request.getEmail())
+                            .password(passwordEncoder.encode(request.getPassword()))
+                            .roles(rolesToAssign)
+                            .active(true)
+                            .build();
+                    return userRepo.save(staffUser);
+                }))
 				.cast(User.class)
-				.map(savedUser-> AuthResponse.builder()
-						.userId(savedUser.getId())
-						.message("Staff created successfully: "+ roleName)
-						.role(roleName).build());
-	}
+				.map(savedUser -> AuthResponse.builder()
+                        .userId(savedUser.getId())
+                        .message("User created successfully with roles: " + rolesToAssign)
+                        .role(rolesToAssign.get(0))
+                        .build());
+    }
 }

@@ -2,6 +2,7 @@ package com.utility.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @EnableWebFluxSecurity
 @RequiredArgsConstructor
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 	private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
@@ -26,8 +28,8 @@ public class SecurityConfig {
                 .authenticationManager(authenticationManager)
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange(exchanges -> exchanges
-                    .pathMatchers("/auth/login", "/auth/register", "/auth/validate", "/actuator/**").permitAll()                    
-                    .pathMatchers("/auth/create-staff").hasRole("ADMIN")
+                    .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
+                    .pathMatchers("/actuator/**").permitAll()
                     .anyExchange().authenticated()
                 )
                 .build();
