@@ -44,9 +44,9 @@ public class JwtUtil {
 	}
 	
 	public String extractUsername(String token) {
-		return extractAllClaims(token).getSubject();
+		return getAllClaimsFromToken(token).getSubject();
 	}
-	private Claims extractAllClaims(String token) {
+	public Claims getAllClaimsFromToken(String token) {
 		return Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token).getBody();
 	}
 	
@@ -54,4 +54,5 @@ public class JwtUtil {
 		byte[] keyBytes = Decoders.BASE64.decode(secret);
 		return Keys.hmacShaKeyFor(keyBytes);
 	}
+
 }

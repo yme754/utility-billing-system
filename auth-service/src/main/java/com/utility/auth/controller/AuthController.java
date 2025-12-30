@@ -54,6 +54,14 @@ public class AuthController {
 		return Mono.just(jwtUtil.validateToken(token) ? "VALID" : "INVALID");
 	}
 	
+	@PostMapping("/create-staff")
+    public Mono<ResponseEntity<AuthResponse>> createStaff(
+            @RequestBody AuthRequest request,
+            @RequestParam String role) {      
+        return authService.createStaff(request, role)
+                .map(ResponseEntity::ok);
+    }
+	
 	@ExceptionHandler(WebExchangeBindException.class)
 	public ResponseEntity<AuthResponse> handleValidationErrors(WebExchangeBindException ex) {
 		String errorMsg = ex.getBindingResult().getAllErrors().stream()
