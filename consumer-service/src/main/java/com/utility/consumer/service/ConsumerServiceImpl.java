@@ -87,6 +87,12 @@ public class ConsumerServiceImpl implements ConsumerService{
         return connectionRepo.findAllByConsumerId(consumerId)
                 .map(this::mapToConnectionDTO);
     }
+	
+	@Override
+    public Flux<ConsumerDTO> getAllConsumers() {
+        return consumerRepo.findAll()
+                .map(this::mapToConsumerDTO);
+    }
 
     private ConsumerDTO mapToConsumerDTO(Consumer c) {
         return ConsumerDTO.builder()

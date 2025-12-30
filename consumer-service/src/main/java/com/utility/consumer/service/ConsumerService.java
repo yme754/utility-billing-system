@@ -12,4 +12,5 @@ public interface ConsumerService {
 	Mono<ConnectionDTO> requestConnection(ConnectionDTO dto);
 	Mono<ConnectionDTO> approveConnection(String connectionId, String meterNumber);
 	Flux<ConnectionDTO> getConnectionsByConsumer(String consumerId);
+	Flux<ConsumerDTO> getAllConsumers();
 }

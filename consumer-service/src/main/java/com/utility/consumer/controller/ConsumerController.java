@@ -1,5 +1,7 @@
 package com.utility.consumer.controller;
 
+import java.security.Principal;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +27,8 @@ public class ConsumerController {
 	private final ConsumerService consumerService;
 	
 	@PostMapping("/profile")
-	public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO dto) {
-		return consumerService.createProfile(dto).map(ResponseEntity::ok);
+	public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO, Principal principal) {
+		return consumerService.createProfile(consumerDTO).map(ResponseEntity::ok);	
 	}
 	
 	@GetMapping("/profile/{userId}")
@@ -46,6 +48,11 @@ public class ConsumerController {
 	
 	@PutMapping("/connections/{id}/approve")
 	public Mono<ResponseEntity<ConnectionDTO>> approveConnection(@PathVariable String id, @RequestParam String meterNumber) {
-		return consumerService.approveConnection(id, meterNumber).map(ResponseEntity::ok);
-	}
+        return consumerService.approveConnection(id, meterNumber).map(ResponseEntity::ok);
+    }
+	
+	@GetMapping
+    public Mono<ResponseEntity<Flux<ConsumerDTO>>> getAllConsumers() {
+        return Mono.just(ResponseEntity.ok(consumerService.getAllConsumers()));
+    }
 }
