@@ -107,15 +107,16 @@ public class BillingServiceImpl implements BillingService{
 	}
 
 	@Override
-	public Mono<AdminStatsDTO> getAdminStats() {
-		Mono<Long> consumerCountMono = webClientBuilder.build().get()
+    public Mono<AdminStatsDTO> getAdminStats(String token) {        
+        Mono<Long> consumerCountMono = webClientBuilder.build().get()
                 .uri("http://CONSUMER-SERVICE/consumers/count")
+                .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToMono(Long.class)
-                .onErrorReturn(0L);
+                .onErrorReturn(0L); 
         Mono<Long> pendingBillsMono = billRepo.countByStatus("UNPAID");
         Mono<Double> revenueMono = billRepo.sumTotalRevenue()
-                .map(BillRepository.RevenueResult::getTotal)
+                .map(result -> result.getTotal() != null ? result.getTotal() : 0.0)
                 .defaultIfEmpty(0.0);
         return Mono.zip(consumerCountMono, revenueMono, pendingBillsMono)
                 .map(tuple -> AdminStatsDTO.builder()
@@ -123,5 +124,5 @@ public class BillingServiceImpl implements BillingService{
                         .totalRevenue(tuple.getT2())
                         .pendingBills(tuple.getT3())
                         .build());
-	}
+    }
 }
