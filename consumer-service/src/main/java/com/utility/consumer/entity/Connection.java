@@ -22,7 +22,7 @@ public class Connection {
 	@Indexed
 	private String consumerId;
 	private String utilityType;
-	@Indexed(unique = true)
+	@Indexed(unique = true, sparse = true)
 	private String meterNumber;
 	private String tariffCategory;
 	private LocalDate connectionDate;

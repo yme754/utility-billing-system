@@ -3,12 +3,14 @@ package com.utility.consumer.service;
 import java.time.LocalDate;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.consumer.dto.ConnectionDTO;
 import com.utility.consumer.dto.ConsumerDTO;
+import com.utility.consumer.dto.EmailRequest;
 import com.utility.consumer.entity.Connection;
 import com.utility.consumer.entity.Consumer;
 import com.utility.consumer.repository.ConnectionRepository;
@@ -20,10 +22,10 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
-@EnableReactiveMethodSecurity
 public class ConsumerServiceImpl implements ConsumerService{
 	private final ConsumerRepository consumerRepo;
 	private final ConnectionRepository connectionRepo;
+	private final KafkaTemplate<String, Object> kafkaTemplate;
 	
 	@Override
 	public Mono<ConsumerDTO> createProfile(ConsumerDTO dto) {
@@ -70,19 +72,22 @@ public class ConsumerServiceImpl implements ConsumerService{
 	
 	@Override
 	public Mono<ConnectionDTO> approveConnection(String connectionId, String meterNumber) {
-        return connectionRepo.findById(connectionId)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Connection Request not found")))
-                .flatMap(connection -> {
-                    return connectionRepo.existsByMeterNumber(meterNumber)
-                            .flatMap(exists -> {
-                                if (exists) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Meter Number already in use"));
-                                connection.setStatus("ACTIVE");
-                                connection.setMeterNumber(meterNumber);
-                                return connectionRepo.save(connection);
-                            });
-                })
-                .map(this::mapToConnectionDTO);
-    }
+		return connectionRepo.findById(connectionId)
+	            .flatMap(connection -> {	                
+	                connection.setStatus("ACTIVE");
+	                connection.setMeterNumber(meterNumber);	                
+	                return connectionRepo.save(connection).doOnSuccess(savedConn -> {
+	                    EmailRequest email = new EmailRequest(
+	                        "yxsh2999@gmail.com",
+	                        "Connection Approved",
+	                        "Your connection for " + savedConn.getUtilityType() 
+	                        + " is now ACTIVE. Meter: " + savedConn.getMeterNumber()
+	                    );
+	                    kafkaTemplate.send("notification-topic", email);
+	                });
+	            })
+	            .map(this::mapToConnectionDTO);
+	    }
 	
 	@Override
 	public Flux<ConnectionDTO> getConnectionsByConsumer(String consumerId) {

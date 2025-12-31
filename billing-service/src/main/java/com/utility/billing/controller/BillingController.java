@@ -63,4 +63,10 @@ public class BillingController {
     public Mono<ResponseEntity<Flux<Bill>>> getMyBills(@PathVariable String connectionId) {
         return Mono.just(ResponseEntity.ok(billingService.getBillsByConnection(connectionId)));
     }
+    
+    @PutMapping("/{id}/pay")
+    @PreAuthorize("hasAnyRole('CONSUMER')")
+    public Mono<ResponseEntity<Void>> payBill(@PathVariable String id, @RequestParam String mode) {
+        return billingService.payBill(id, mode).map(v -> ResponseEntity.ok().<Void>build());
+    }
 }

@@ -13,10 +13,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.utility.consumer.dto.ConnectionApprovalDTO;
 import com.utility.consumer.dto.ConnectionDTO;
 import com.utility.consumer.dto.ConsumerDTO;
+import com.utility.consumer.entity.Connection;
+import com.utility.consumer.service.ConnectionService;
 import com.utility.consumer.service.ConsumerService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -26,6 +30,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class ConsumerController {
 	private final ConsumerService consumerService;
+	private final ConnectionService connectionService;
 	
 	@PostMapping("/profile")
 	@PreAuthorize("isAuthenticated()")
@@ -40,10 +45,10 @@ public class ConsumerController {
 	}
 	
 	@PostMapping("/connections")
-	@PreAuthorize("hasRole('CONSUMER')")
-	public Mono<ResponseEntity<ConnectionDTO>> requestConnection(@RequestBody ConnectionDTO dto) {
-		return consumerService.requestConnection(dto).map(ResponseEntity::ok);
-	}
+    @PreAuthorize("hasRole('CONSUMER')")
+    public Mono<ResponseEntity<ConnectionDTO>> requestConnection(@Valid @RequestBody ConnectionDTO dto) {
+        return consumerService.requestConnection(dto).map(ResponseEntity::ok);
+    }
 	
 	@GetMapping("/{consumerId}/connections")
 	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'CONSUMER')")
@@ -51,10 +56,12 @@ public class ConsumerController {
 		return consumerService.getConnectionsByConsumer(consumerId);
 	}
 	
-	@PutMapping("/connections/{id}/approve")
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
-	public Mono<ResponseEntity<ConnectionDTO>> approveConnection(@PathVariable String id, @RequestParam String meterNumber) {
-        return consumerService.approveConnection(id, meterNumber).map(ResponseEntity::ok);
+	@PutMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
+    public Mono<ResponseEntity<Connection>> approveConnection(@PathVariable String id, 
+            @RequestBody ConnectionApprovalDTO approvalDto) { 
+        return connectionService.approveConnection(id, approvalDto.getMeterNumber())
+                .map(ResponseEntity::ok);
     }
 	
 	@GetMapping
@@ -68,4 +75,5 @@ public class ConsumerController {
     public Mono<Long> getConsumerCount() {
         return consumerService.getAllConsumers().count();
     }
+	
 }

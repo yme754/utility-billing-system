@@ -1,19 +1,23 @@
 package com.utility.billing.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.billing.dto.AdminStatsDTO;
+import com.utility.billing.dto.EmailRequest;
 import com.utility.billing.dto.MeterReadingDTO;
 import com.utility.billing.dto.TariffDTO;
 import com.utility.billing.entity.Bill;
+import com.utility.billing.entity.Transaction;
 import com.utility.billing.repository.BillRepository;
+import com.utility.billing.repository.TransactionRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,10 +27,11 @@ import reactor.core.publisher.Mono;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@EnableReactiveMethodSecurity
 public class BillingServiceImpl implements BillingService{
 	private final WebClient.Builder webClientBuilder;
 	private final BillRepository billRepo;
+	private final KafkaTemplate<String, Object> kafkaTemplate;
+	private final TransactionRepository transactionRepo;
 	
 	@Override
     public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token) {
@@ -77,9 +82,17 @@ public class BillingServiceImpl implements BillingService{
                     .totalAmount(total)
                     .status("UNPAID")
                     .build();
-            return billRepo.save(bill);
+            return billRepo.save(bill).doOnSuccess(savedBill -> {
+                log.info("Sending Bill Generation Email for Bill ID: {}", savedBill.getId());                
+                EmailRequest email = new EmailRequest(
+                    "yxsh2999@gmail.com", 
+                    "New Bill Generated", 
+                    "Dear Customer, your bill of ₹" + savedBill.getTotalAmount() + " is generated. Due Date: " + savedBill.getDueDate()
+                );
+                kafkaTemplate.send("notification-topic", email);
+            });
         });
-    }
+	}
 	
 	@Override
 	public Mono<Bill> getBill(String billId) {
@@ -125,4 +138,25 @@ public class BillingServiceImpl implements BillingService{
                         .pendingBills(tuple.getT3())
                         .build());
     }
+	
+	@Override
+	public Mono<Void> payBill(String billId, String paymentMode) {
+	    return billRepo.findById(billId)
+	        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
+	        .flatMap(bill -> {
+	            if ("PAID".equals(bill.getStatus())) return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bill is already paid"));            
+	            bill.setStatus("PAID");	            
+	            Transaction transaction = Transaction.builder()
+	                    .billId(bill.getId())
+	                    .amount(bill.getTotalAmount())
+	                    .paymentMode(paymentMode)
+	                    .transactionReference("TXN-" + System.currentTimeMillis()) // Simulating a ref ID
+	                    .timestamp(LocalDateTime.now())
+	                    .status("SUCCESS")
+	                    .build();
+	            return transactionRepo.save(transaction)
+	                    .then(billRepo.save(bill));
+	        })
+	        .then();
+	}
 }

@@ -52,9 +52,9 @@ public class PaymentServiceImpl implements PaymentService{
                     ).doOnSuccess(p -> {
                         log.info("Sending Payment Notification for Bill: {}", p.getBillId());
                         EmailRequest email = new EmailRequest(
-                                "user@example.com",
+                                "yxsh2999@gmail.com",
                                 "Payment Successful",
-                                "Your payment of $" + p.getAmount() + " for Bill " + p.getBillId() + " was successful. Trans ID: " + p.getTransactionId()
+                                "Your payment of ₹" + p.getAmount() + " for Bill " + p.getBillId() + " was successful. Trans ID: " + p.getTransactionId()
                         );
                         kafkaTemplate.send("notification-topic", email);
                     });

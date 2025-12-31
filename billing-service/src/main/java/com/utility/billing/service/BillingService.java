@@ -13,4 +13,5 @@ public interface BillingService {
 	Flux<Bill> getPendingBills();
     Flux<Bill> getBillsByConnection(String connectionId);
     Mono<AdminStatsDTO> getAdminStats(String token);
+    Mono<Void> payBill(String billId, String paymentMode);
 }

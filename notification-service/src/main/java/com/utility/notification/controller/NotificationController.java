@@ -1,6 +1,7 @@
 package com.utility.notification.controller;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,6 +11,7 @@ import com.utility.notification.dto.EmailRequest;
 import com.utility.notification.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/notifications")
@@ -19,8 +21,8 @@ public class NotificationController {
 	
 	@PostMapping("/send")
 	@PreAuthorize("hasRole('ADMIN')")
-	public String sendTestEmail(@RequestBody EmailRequest request) {
-		emailService.sendEmail(request);
-		return "Email request processed";
-	}
+	public Mono<String> sendTestEmail(@RequestBody EmailRequest request) {
+        emailService.sendEmail(request);
+        return Mono.just("Email request processed");
+    }
 }

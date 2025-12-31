@@ -2,6 +2,7 @@ package com.utility.consumer.service;
 
 import com.utility.consumer.dto.ConnectionDTO;
 import com.utility.consumer.dto.ConsumerDTO;
+import com.utility.consumer.entity.Connection;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
