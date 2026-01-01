@@ -30,50 +30,49 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class ConsumerController {
 	private final ConsumerService consumerService;
-	private final ConnectionService connectionService;
-	
-	@PostMapping("/profile")
-	@PreAuthorize("isAuthenticated()")
-	public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO, Principal principal) {
-		return consumerService.createProfile(consumerDTO).map(ResponseEntity::ok);	
-	}
-	
-	@GetMapping("/profile/{userId}")
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
-	public Mono<ResponseEntity<ConsumerDTO>> getProfile(@PathVariable String userId) {
-		return consumerService.getProfile(userId).map(ResponseEntity::ok);
-	}
-	
-	@PostMapping("/connections")
+    private final ConnectionService connectionService;
+    
+    @PostMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO, Principal principal) {
+        return consumerService.createProfile(consumerDTO).map(ResponseEntity::ok);  
+    }
+    
+    @GetMapping("/profile/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
+    public Mono<ResponseEntity<ConsumerDTO>> getProfile(@PathVariable String userId) {
+        return consumerService.getProfile(userId).map(ResponseEntity::ok);
+    }
+    
+    @PostMapping("/connections")
     @PreAuthorize("hasRole('CONSUMER')")
     public Mono<ResponseEntity<ConnectionDTO>> requestConnection(@Valid @RequestBody ConnectionDTO dto) {
         return consumerService.requestConnection(dto).map(ResponseEntity::ok);
     }
-	
-	@GetMapping("/{consumerId}/connections")
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'CONSUMER')")
-	public Flux<ConnectionDTO> getMyConnections(@PathVariable String consumerId) {
-		return consumerService.getConnectionsByConsumer(consumerId);
-	}
-	
-	@PutMapping("/{id}/approve")
+    
+    @GetMapping("/{consumerId}/connections")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'CONSUMER')")
+    public Flux<ConnectionDTO> getMyConnections(@PathVariable String consumerId) {
+        return consumerService.getConnectionsByConsumer(consumerId);
+    }
+    
+    @PutMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
     public Mono<ResponseEntity<Connection>> approveConnection(@PathVariable String id, 
             @RequestBody ConnectionApprovalDTO approvalDto) { 
         return connectionService.approveConnection(id, approvalDto.getMeterNumber())
                 .map(ResponseEntity::ok);
     }
-	
-	@GetMapping
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
+    
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
     public Mono<ResponseEntity<Flux<ConsumerDTO>>> getAllConsumers() {
         return Mono.just(ResponseEntity.ok(consumerService.getAllConsumers()));
     }
-	
-	@GetMapping("/count")
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
+    
+    @GetMapping("/count")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
     public Mono<Long> getConsumerCount() {
         return consumerService.getAllConsumers().count();
     }
-	
 }
