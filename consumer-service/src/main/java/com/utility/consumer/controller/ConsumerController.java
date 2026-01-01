@@ -75,4 +75,10 @@ public class ConsumerController {
     public Mono<Long> getConsumerCount() {
         return consumerService.getAllConsumers().count();
     }
+    
+    @GetMapping("/connections/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
+    public Flux<ConnectionDTO> getAllPendingConnections() {
+        return connectionService.getPendingConnections();
+    }
 }

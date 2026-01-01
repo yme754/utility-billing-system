@@ -10,4 +10,5 @@ import reactor.core.publisher.Mono;
 public interface ConnectionRepository extends ReactiveMongoRepository<Connection, String>{
 	Flux<Connection> findAllByConsumerId(String consumerId);
 	Mono<Boolean> existsByMeterNumber(String meterNumber);
+	Flux<Connection> findByStatus(String status);
 }

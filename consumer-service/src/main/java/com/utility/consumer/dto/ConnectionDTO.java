@@ -19,4 +19,5 @@ public class ConnectionDTO {
 	private String meterNumber;
 	private LocalDate connectionDate;
 	private String status;
+	private String consumerName;
 }
