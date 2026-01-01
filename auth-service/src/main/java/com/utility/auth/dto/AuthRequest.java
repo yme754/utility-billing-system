@@ -23,4 +23,7 @@ public class AuthRequest {
     @Size(min = 6, message = "Password must be at least 6 characters")
 	private String password;
 	private List<String> roles;
+	private String firstName;
+    private String lastName;
+    private String address;
 }
