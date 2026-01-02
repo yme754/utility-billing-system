@@ -37,7 +37,7 @@ public class ConnectionServiceImpl implements ConnectionService{
     
     @Override
     public Flux<ConnectionDTO> getPendingConnections() {
-        return connectionRepo.findByStatus("PENDING")
+    	return connectionRepo.findByStatusNot("ACTIVE")
                 .flatMap(conn -> 
                     consumerRepo.findById(conn.getConsumerId()) 
                         .map(consumer -> {
@@ -47,6 +47,18 @@ public class ConnectionServiceImpl implements ConnectionService{
                         })
                         .defaultIfEmpty(mapToDTO(conn)) 
                 );
+    }
+    
+    @Override
+    public Mono<Connection> requestConnection(Connection connection) {
+        connection.setStatus("PENDING");
+        if (connection.getConnectionDate() == null) connection.setConnectionDate(LocalDate.now());     
+        return connectionRepo.save(connection);
+    }
+    
+    @Override
+    public Flux<Connection> getMyConnections(String consumerId) {
+        return connectionRepo.findByConsumerId(consumerId);
     }
     
     private ConnectionDTO mapToDTO(Connection connection) {

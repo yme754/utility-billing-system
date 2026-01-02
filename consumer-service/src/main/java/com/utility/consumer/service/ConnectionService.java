@@ -9,4 +9,6 @@ import reactor.core.publisher.Mono;
 public interface ConnectionService {
 	Mono<Connection> approveConnection(String connectionId, String meterNumber);
 	Flux<ConnectionDTO> getPendingConnections();
+	Mono<Connection> requestConnection(Connection connection);
+	Flux<Connection> getMyConnections(String consumerId);
 }

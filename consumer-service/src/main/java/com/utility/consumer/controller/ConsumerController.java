@@ -1,9 +1,8 @@
 package com.utility.consumer.controller;
 
-import java.security.Principal;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +33,7 @@ public class ConsumerController {
     
     @PostMapping("/profile")
     @PreAuthorize("isAuthenticated()")
-    public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO, Principal principal) {
+    public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO) {
         return consumerService.createProfile(consumerDTO).map(ResponseEntity::ok);  
     }
     
@@ -46,14 +45,18 @@ public class ConsumerController {
     
     @PostMapping("/connections")
     @PreAuthorize("hasRole('CONSUMER')")
-    public Mono<ResponseEntity<ConnectionDTO>> requestConnection(@Valid @RequestBody ConnectionDTO dto) {
-        return consumerService.requestConnection(dto).map(ResponseEntity::ok);
+    public Mono<ResponseEntity<Connection>> requestConnection(@Valid @RequestBody ConnectionDTO dto) {
+    	Connection newConnection = Connection.builder()
+                .consumerId(dto.getConsumerId())
+                .utilityType(dto.getUtilityType())
+                .tariffCategory(dto.getTariffCategory()).build();
+        return connectionService.requestConnection(newConnection).map(ResponseEntity::ok);
     }
     
     @GetMapping("/{consumerId}/connections")
     @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'CONSUMER')")
-    public Flux<ConnectionDTO> getMyConnections(@PathVariable String consumerId) {
-        return consumerService.getConnectionsByConsumer(consumerId);
+    public Flux<Connection> getMyConnections(@PathVariable String consumerId) {
+    	return connectionService.getMyConnections(consumerId);
     }
     
     @PutMapping("/{id}/approve")

@@ -11,4 +11,6 @@ public interface ConnectionRepository extends ReactiveMongoRepository<Connection
 	Flux<Connection> findAllByConsumerId(String consumerId);
 	Mono<Boolean> existsByMeterNumber(String meterNumber);
 	Flux<Connection> findByStatus(String status);
+	Flux<Connection> findByConsumerId(String consumerId);
+	Flux<Connection> findByStatusNot(String status);
 }
