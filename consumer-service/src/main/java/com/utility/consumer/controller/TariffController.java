@@ -15,7 +15,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/tariffs")
+@RequestMapping("/consumers/tariffs")
 @RequiredArgsConstructor
 public class TariffController {
 	private final TariffService tariffService;
