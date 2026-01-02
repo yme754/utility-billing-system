@@ -84,4 +84,16 @@ public class ConsumerController {
     public Flux<ConnectionDTO> getAllPendingConnections() {
         return connectionService.getPendingConnections();
     }
+    
+    @GetMapping("/connections/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER')")
+    public Mono<ResponseEntity<ConnectionDTO>> getConnectionById(@PathVariable String id) {
+        return consumerService.getConnectionById(id).map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/connections")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
+    public Flux<ConnectionDTO> getAllConnections() {
+        return consumerService.getAllConnections();
+    }
 }

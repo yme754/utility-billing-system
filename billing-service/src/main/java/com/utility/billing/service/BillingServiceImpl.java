@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.utility.billing.dto.AdminStatsDTO;
 import com.utility.billing.dto.EmailRequest;
 import com.utility.billing.dto.MeterReadingDTO;
+import com.utility.billing.dto.MeterReadingEvent;
 import com.utility.billing.dto.TariffDTO;
 import com.utility.billing.entity.Bill;
 import com.utility.billing.entity.Transaction;
@@ -34,67 +35,119 @@ public class BillingServiceImpl implements BillingService{
 	private final TransactionRepository transactionRepo;
 	
 	@Override
+    public Mono<Bill> generateAutomatedBill(MeterReadingEvent event) {
+        String utilityType = "ELECTRICITY"; 
+        Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
+                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=" + utilityType)
+                .retrieve()
+                .bodyToFlux(TariffDTO.class)
+                .next()
+                .switchIfEmpty(Mono.error(new RuntimeException("No Tariff found")));
+        return tariffMono.flatMap(tariff -> {
+            return calculateAndSaveBill(
+                event.getConnectionId(),
+                event.getMeterId(),
+                event.getUnitsConsumed(),
+                tariff
+            );
+        });
+    }
+
+    private Mono<Bill> calculateAndSaveBill(String connId, String meterId, Double units, TariffDTO tariff) {
+         double rate = tariff.getSlabs().stream()
+                .filter(slab -> units >= slab.getMinUnits() && units <= slab.getMaxUnits())
+                .findFirst()
+                .map(TariffDTO.Slab::getRatePerUnit)
+                .orElse(0.0);
+        double energyCharge = units * rate;
+        double tax = (energyCharge + tariff.getFixedCharge()) * (tariff.getTaxPercentage() / 100);
+        double total = energyCharge + tariff.getFixedCharge() + tax;
+        Bill bill = Bill.builder()
+                .connectionId(connId)
+                .meterId(meterId)
+                .billingDate(LocalDate.now())
+                .dueDate(LocalDate.now().plusDays(15))
+                .unitsConsumed(units)
+                .ratePerUnit(rate)
+                .fixedCharge(tariff.getFixedCharge())
+                .taxAmount(tax)
+                .amount(energyCharge)
+                .totalAmount(total)
+                .status("UNPAID")
+                .build();
+        return billRepo.save(bill).doOnSuccess(savedBill -> {
+            log.info("Bill Generated: {}", savedBill.getId());
+            EmailRequest email = new EmailRequest(
+                "yxsh2999@gmail.com", 
+                "New Bill Generated", 
+                "Bill of Rs." + savedBill.getTotalAmount() + " generated."
+            );
+            kafkaTemplate.send("notification-topic", email);
+        });
+    }
+
+    @Override
     public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token) {
-        log.info("Generating bill for Meter: {}, Utility: {}", meterId, utilityName);
+        log.info("Manual Bill Gen: Meter: {}, Utility: {}", meterId, utilityName);
         Mono<MeterReadingDTO> readingMono = webClientBuilder.build().get()
                 .uri("http://METER-SERVICE/readings/" + meterId)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToFlux(MeterReadingDTO.class)
-                .last()
-                .onErrorResume(e -> {
-                    log.error("Error fetching reading: {}", e.getMessage());
-                    return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Meter reading not found"));
-                });
+                .last();
         Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
-                .uri("http://UTILITY-SERVICE/utilities/tariffs?type=" + utilityName)
+                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=" + utilityName)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToFlux(TariffDTO.class)
-                .next()
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Tariff found")))
-                .onErrorResume(e -> {
-                    log.error("Error fetching tariff: {}", e.getMessage());
-                    return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to fetch tariff"));
-                });
+                .next();
         return Mono.zip(readingMono, tariffMono).flatMap(tuple -> {
-             MeterReadingDTO reading = tuple.getT1();
-             TariffDTO tariff = tuple.getT2();
-             double units = reading.getUnitsConsumed();
-             double rate = tariff.getSlabs().stream()
-                    .filter(slab -> units >= slab.getMinUnits() && units <= slab.getMaxUnits())
-                    .findFirst()
-                    .map(TariffDTO.Slab::getRatePerUnit)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No slab found"));
-            double energyCharge = units * rate;
-            double tax = (energyCharge + tariff.getFixedCharge()) * (tariff.getTaxPercentage() / 100);
-            double total = energyCharge + tariff.getFixedCharge() + tax;
-            Bill bill = Bill.builder()
-                    .connectionId(connectionId)
-                    .meterId(meterId)
-                    .billingDate(LocalDate.now())
-                    .dueDate(LocalDate.now().plusDays(15))
-                    .unitsConsumed(units)
-                    .ratePerUnit(rate)
-                    .fixedCharge(tariff.getFixedCharge())
-                    .taxAmount(tax)
-                    .amount(energyCharge)
-                    .totalAmount(total)
-                    .status("UNPAID")
-                    .build();
-            return billRepo.save(bill).doOnSuccess(savedBill -> {
-                log.info("Sending Bill Generation Email for Bill ID: {}", savedBill.getId());                
-                EmailRequest email = new EmailRequest(
-                    "yxsh2999@gmail.com", 
-                    "New Bill Generated", 
-                    "Dear Customer, your bill of ₹" + savedBill.getTotalAmount() + " is generated. Due Date: " + savedBill.getDueDate()
-                );
-                kafkaTemplate.send("notification-topic", email);
-            });
+             return calculateAndSaveBill(connectionId, meterId, tuple.getT1().getUnitsConsumed(), tuple.getT2());
         });
+    }
+    
+    @Override
+    public Mono<AdminStatsDTO> getAdminStats(String token) {        
+        Mono<Long> consumerCountMono = webClientBuilder.build().get()
+                .uri("http://CONSUMER-SERVICE/consumers/count")
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .retrieve()
+                .bodyToMono(Long.class)
+                .onErrorReturn(0L); 
+        Mono<Long> pendingBillsMono = billRepo.countByStatus("UNPAID");
+        Mono<Double> revenueMono = billRepo.sumTotalRevenue()
+                .map(result -> result.getTotal() != null ? result.getTotal() : 0.0)
+                .defaultIfEmpty(0.0);
+        return Mono.zip(consumerCountMono, revenueMono, pendingBillsMono)
+                .map(tuple -> AdminStatsDTO.builder()
+                        .totalConsumers(tuple.getT1())
+                        .totalRevenue(tuple.getT2())
+                        .pendingBills(tuple.getT3())
+                        .build());
+    }
+    
+    @Override
+	public Mono<Void> payBill(String billId, String paymentMode) {
+		return billRepo.findById(billId)
+		    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
+		    .flatMap(bill -> {
+		        if ("PAID".equals(bill.getStatus())) return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bill is already paid"));            
+		        bill.setStatus("PAID");            
+		        Transaction transaction = Transaction.builder()
+		                .billId(bill.getId())
+		                .amount(bill.getTotalAmount())
+		                .paymentMode(paymentMode)
+		                .transactionReference("TXN-" + System.currentTimeMillis()) 
+		                .timestamp(LocalDateTime.now())
+		                .status("SUCCESS")
+		                .build();
+		        return transactionRepo.save(transaction)
+		                .then(billRepo.save(bill));
+		    })
+		    .then();
 	}
-	
-	@Override
+
+    @Override
 	public Mono<Bill> getBill(String billId) {
 		return billRepo.findById(billId);
 	}
@@ -117,46 +170,5 @@ public class BillingServiceImpl implements BillingService{
 	@Override
 	public Flux<Bill> getBillsByConnection(String connectionId) {
 		return billRepo.findByConnectionId(connectionId);
-	}
-
-	@Override
-    public Mono<AdminStatsDTO> getAdminStats(String token) {        
-        Mono<Long> consumerCountMono = webClientBuilder.build().get()
-                .uri("http://CONSUMER-SERVICE/consumers/count")
-                .header(HttpHeaders.AUTHORIZATION, token)
-                .retrieve()
-                .bodyToMono(Long.class)
-                .onErrorReturn(0L); 
-        Mono<Long> pendingBillsMono = billRepo.countByStatus("UNPAID");
-        Mono<Double> revenueMono = billRepo.sumTotalRevenue()
-                .map(result -> result.getTotal() != null ? result.getTotal() : 0.0)
-                .defaultIfEmpty(0.0);
-        return Mono.zip(consumerCountMono, revenueMono, pendingBillsMono)
-                .map(tuple -> AdminStatsDTO.builder()
-                        .totalConsumers(tuple.getT1())
-                        .totalRevenue(tuple.getT2())
-                        .pendingBills(tuple.getT3())
-                        .build());
-    }
-	
-	@Override
-	public Mono<Void> payBill(String billId, String paymentMode) {
-	    return billRepo.findById(billId)
-	        .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
-	        .flatMap(bill -> {
-	            if ("PAID".equals(bill.getStatus())) return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bill is already paid"));            
-	            bill.setStatus("PAID");	            
-	            Transaction transaction = Transaction.builder()
-	                    .billId(bill.getId())
-	                    .amount(bill.getTotalAmount())
-	                    .paymentMode(paymentMode)
-	                    .transactionReference("TXN-" + System.currentTimeMillis()) // Simulating a ref ID
-	                    .timestamp(LocalDateTime.now())
-	                    .status("SUCCESS")
-	                    .build();
-	            return transactionRepo.save(transaction)
-	                    .then(billRepo.save(bill));
-	        })
-	        .then();
 	}
 }

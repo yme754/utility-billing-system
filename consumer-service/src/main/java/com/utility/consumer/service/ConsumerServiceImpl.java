@@ -100,6 +100,35 @@ public class ConsumerServiceImpl implements ConsumerService{
         return consumerRepo.findAll()
                 .map(this::mapToConsumerDTO);
     }
+	
+	@Override
+    public Mono<ConnectionDTO> getConnectionById(String connectionId) {
+        return connectionRepo.findById(connectionId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Connection not found")))
+                .flatMap(connection -> {
+                    return consumerRepo.findById(connection.getConsumerId())
+                            .map(consumer -> {
+                                ConnectionDTO dto = mapToConnectionDTO(connection);
+                                dto.setConsumerName(consumer.getFirstName() + " " + consumer.getLastName());
+                                return dto;
+                            })
+                            .defaultIfEmpty(mapToConnectionDTO(connection));
+                });
+    }
+
+    @Override
+    public Flux<ConnectionDTO> getAllConnections() {
+        return connectionRepo.findAll()
+                .flatMap(connection -> 
+                    consumerRepo.findById(connection.getConsumerId())
+                        .map(consumer -> {
+                            ConnectionDTO dto = mapToConnectionDTO(connection);
+                            dto.setConsumerName(consumer.getFirstName() + " " + consumer.getLastName());
+                            return dto;
+                        })
+                        .defaultIfEmpty(mapToConnectionDTO(connection))
+                );
+    }
 
     private ConsumerDTO mapToConsumerDTO(Consumer c) {
         return ConsumerDTO.builder()

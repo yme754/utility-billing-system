@@ -1,6 +1,7 @@
 package com.utility.billing.service;
 
 import com.utility.billing.dto.AdminStatsDTO;
+import com.utility.billing.dto.MeterReadingEvent;
 import com.utility.billing.entity.Bill;
 
 import reactor.core.publisher.Flux;
@@ -14,4 +15,5 @@ public interface BillingService {
     Flux<Bill> getBillsByConnection(String connectionId);
     Mono<AdminStatsDTO> getAdminStats(String token);
     Mono<Void> payBill(String billId, String paymentMode);
+    Mono<Bill> generateAutomatedBill(MeterReadingEvent event);
 }

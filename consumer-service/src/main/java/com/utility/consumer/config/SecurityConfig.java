@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .authenticationManager(authenticationManager)
                 .securityContextRepository(securityContextRepository)                
                 .authorizeExchange(exchanges -> exchanges
+                		.pathMatchers(HttpMethod.GET, "/consumers/tariffs").permitAll()                 	    
+                	    .pathMatchers(HttpMethod.GET, "/consumers/count").permitAll()
                         .pathMatchers("/consumers/**").permitAll() 
                         .anyExchange().authenticated()
                 )

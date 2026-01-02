@@ -7,11 +7,13 @@ import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.meter.dto.ErrorResponse;
 
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 	@ExceptionHandler(WebExchangeBindException.class)
 	public ResponseEntity<ErrorResponse> handleValidationErrors(WebExchangeBindException ex) {

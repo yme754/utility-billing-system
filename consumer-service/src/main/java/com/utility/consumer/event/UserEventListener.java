@@ -1,40 +1,31 @@
 package com.utility.consumer.event;
 
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Service;
-
+import org.springframework.stereotype.Component;
 import com.utility.common.event.UserRegisteredEvent;
-import com.utility.consumer.entity.Consumer;
-import com.utility.consumer.repository.ConsumerRepository;
-
+import com.utility.consumer.service.ConsumerService;
+import com.utility.consumer.dto.ConsumerDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
 
-@Service
+@Component
 @Slf4j
 @RequiredArgsConstructor
 public class UserEventListener {
-	private final ConsumerRepository consumerRepo;
+
+    private final ConsumerService consumerService;
     @KafkaListener(topics = "user-registered", groupId = "consumer-group")
-    public void handleUserRegistration(UserRegisteredEvent event) {
-        log.info("Received Event: Create Profile for {}", event.getUsername());
-        consumerRepo.findByUserId(event.getUserId())
-            .hasElement()
-            .flatMap(exists -> {
-                if (exists) {
-                    log.info("Profile already exists for {}", event.getUserId());
-                    return Mono.empty();
-                }
-                Consumer consumer = new Consumer();
-                consumer.setUserId(event.getUserId());
-                consumer.setFirstName(event.getFirstName());
-                consumer.setLastName(event.getLastName());
-                consumer.setEmail(event.getEmail());
-                consumer.setAddress(event.getAddress());
-                consumer.setPhoneNumber(""); 
-                return consumerRepo.save(consumer).doOnSuccess(c -> log.info("Auto-created profile: {}", c.getId()));
-            })
-            .subscribe();
+    public void handleUserRegistered(UserRegisteredEvent event) {
+        log.info("Received User Registered Event for userId: {}", event.getUserId());
+        ConsumerDTO consumerDTO = new ConsumerDTO();
+        consumerDTO.setUserId(event.getUserId());
+        consumerDTO.setFirstName(event.getFirstName());
+        consumerDTO.setLastName(event.getLastName());
+        consumerDTO.setEmail(event.getEmail());
+        consumerService.createProfile(consumerDTO)
+            .subscribe(
+                success -> log.info("Profile created successfully for user: {}", event.getUsername()),
+                error -> log.error("Failed to create profile for user: {}", event.getUsername(), error)
+            );
     }
 }
