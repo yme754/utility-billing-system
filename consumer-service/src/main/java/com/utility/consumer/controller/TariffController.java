@@ -1,15 +1,9 @@
 package com.utility.consumer.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 import com.utility.consumer.entity.TariffPlan;
-import com.utility.consumer.service.TariffService;
-
+import com.utility.consumer.repository.TariffPlanRepository;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -17,16 +11,19 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/consumers/tariffs")
 @RequiredArgsConstructor
-public class TariffController {
-	private final TariffService tariffService;
+public class TariffController {    
+    private final TariffPlanRepository tariffRepo;
 
     @PostMapping
     public Mono<ResponseEntity<TariffPlan>> createTariff(@RequestBody TariffPlan plan) {
-        return tariffService.addPlan(plan).map(ResponseEntity::ok);
+        return tariffRepo.save(plan).map(ResponseEntity::ok);
     }
 
     @GetMapping
-    public Flux<TariffPlan> getAllTariffs() {
-        return tariffService.getAllPlans();
+    public Flux<TariffPlan> getTariffs(@RequestParam(name = "type", required = false) String type) {
+        if (type != null) {
+            return tariffRepo.findByUtilityType(type);
+        }
+        return tariffRepo.findAll();
     }
 }

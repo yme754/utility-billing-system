@@ -29,8 +29,8 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)                
-                .cors(ServerHttpSecurity.CorsSpec::disable)                
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+                .cors(ServerHttpSecurity.CorsSpec::disable)
                 .authenticationManager(authenticationManager)
                 .securityContextRepository(securityContextRepository)                
                 .authorizeExchange(exchanges -> exchanges

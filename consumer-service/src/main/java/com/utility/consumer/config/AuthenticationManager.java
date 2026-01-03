@@ -24,13 +24,23 @@ public class AuthenticationManager implements ReactiveAuthenticationManager{
     @SuppressWarnings("unchecked")
     public Mono<Authentication> authenticate(Authentication authentication) {
         String authToken = authentication.getCredentials().toString();
-        if (!jwtUtil.validateToken(authToken)) return Mono.empty();
-        Claims claims = jwtUtil.getAllClaimsFromToken(authToken);
-        String username = claims.getSubject();
-        List<String> roles = claims.get("roles", List.class);
-        List<SimpleGrantedAuthority> authorities = roles.stream()
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
-        return Mono.just(new UsernamePasswordAuthenticationToken(username, authToken, authorities));
+        try {
+            if (!jwtUtil.validateToken(authToken)) {
+                System.out.println("TOKEN INVALID: Signature verification failed or token expired.");
+                return Mono.empty();
+            }
+            Claims claims = jwtUtil.getAllClaimsFromToken(authToken);
+            String username = claims.getSubject();
+            List<String> roles = claims.get("roles", List.class);
+            System.out.println("TOKEN VALID. User: " + username + " | Roles: " + roles);
+            List<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
+            return Mono.just(new UsernamePasswordAuthenticationToken(username, authToken, authorities));
+        } catch (Exception e) {
+            System.out.println("AUTH EXCEPTION: " + e.getMessage());
+            e.printStackTrace();
+            return Mono.empty();
+        }
     }
 }
