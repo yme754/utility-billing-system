@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.utility.payment.dto.PaymentRequest;
 import com.utility.payment.entity.Payment;
 import com.utility.payment.service.PaymentService;
 
@@ -23,16 +24,17 @@ public class PaymentController {
 	private final PaymentService paymentService;
 	
 	@PostMapping("/pay")
-    @PreAuthorize("hasRole('CONSUMER')")
-    public Mono<ResponseEntity<Payment>> makePayment(
-            @RequestBody Payment payment,
-            @RequestHeader("Authorization") String token) {
-        return paymentService.processPayment(payment, token).map(ResponseEntity::ok);
-    }
+	@PreAuthorize("hasRole('CONSUMER')")
+	public Mono<ResponseEntity<Payment>> makePayment(
+	        @RequestBody PaymentRequest request,
+	        @RequestHeader("Authorization") String token) {
+	    return paymentService.processPayment(request, token).map(ResponseEntity::ok);
+	}
 	
 	@GetMapping("/history")
     @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
     public Mono<ResponseEntity<Flux<Payment>>> getPaymentHistory() {
         return Mono.just(ResponseEntity.ok(paymentService.getSuccessfulPayments()));
     }
+	
 }

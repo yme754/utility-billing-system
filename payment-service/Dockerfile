@@ -1,11 +1,16 @@
-FROM amazoncorretto:17-alpine
+FROM eclipse-temurin:17-jre as builder
+WORKDIR /app
+COPY target/*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
 
-RUN apk add --no-cache curl
-
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-COPY target/payment-service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/dependencies/ ./
+COPY --from=builder /app/spring-boot-loader/ ./
+COPY --from=builder /app/snapshot-dependencies/ ./
+COPY --from=builder /app/application/ ./
 
-EXPOSE 8088
+EXPOSE 8080
 
-ENTRYPOINT ["java","-jar","app.jar","--spring.profiles.active=docker"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "org.springframework.boot.loader.launch.JarLauncher"]

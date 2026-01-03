@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.utility.payment.dto.PaymentRequest;
 import com.utility.payment.entity.Payment;
 import com.utility.payment.repository.PaymentRepository;
 
@@ -23,62 +24,65 @@ import reactor.core.publisher.Mono;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@EnableReactiveMethodSecurity
-public class PaymentServiceImpl implements PaymentService{
-	private final PaymentRepository paymentRepo;
-	private final WebClient.Builder webClientBuilder;
-	private final KafkaTemplate<String, Object> kafkaTemplate;
-	
-	@Override
-	public Mono<Payment> processPayment(Payment payment, String token) {
-		log.info("Processing payment for billId: {}", payment.getBillId());
+public class PaymentServiceImpl implements PaymentService {
+    
+    private final PaymentRepository paymentRepo;
+    private final WebClient.Builder webClientBuilder;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    
+    @Override
+    public Mono<Payment> processPayment(PaymentRequest request, String token) {
+        log.info("Processing Mock Payment for Bill: {}", request.getBillId());
         return webClientBuilder.build().get()
-                .uri("http://BILLING-SERVICE/bills/" + payment.getBillId())
+                .uri("http://BILLING-SERVICE/bills/" + request.getBillId())
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToMono(BillDTO.class)
                 .flatMap(bill -> {
-                    payment.setAmount(bill.getTotalAmount());
-                    payment.setStatus("SUCCESS");
-                    payment.setTransactionId(UUID.randomUUID().toString());
-                    payment.setPaymentDate(LocalDateTime.now());                    
-                    return paymentRepo.save(payment).flatMap(savedPayment -> 
-                        webClientBuilder.build().put()
-                                .uri("http://BILLING-SERVICE/bills/" + payment.getBillId() + "/status?status=PAID")
-                                .header(HttpHeaders.AUTHORIZATION, token)
-                                .retrieve()
-                                .bodyToMono(Void.class)
-                                .then(Mono.just(savedPayment))
-                    ).doOnSuccess(p -> {
-                        log.info("Sending Payment Notification for Bill: {}", p.getBillId());
+                    if ("PAID".equals(bill.getStatus())) {
+                        return Mono.error(new RuntimeException("This bill is already PAID!"));
+                    }
+                    Payment payment = Payment.builder()
+                            .billId(request.getBillId())
+                            .amount(bill.getTotalAmount())
+                            .paymentMode(request.getPaymentMode())
+                            .status("SUCCESS")
+                            .transactionId("TXN-" + UUID.randomUUID().toString())
+                            .paymentDate(LocalDateTime.now())
+                            .build();                    
+                    return paymentRepo.save(payment).flatMap(savedPayment -> {
+                        kafkaTemplate.send("payment-success", savedPayment);
+                        log.info("Event 'payment-success' sent to Kafka");
                         EmailRequest email = new EmailRequest(
-                                "yxsh2999@gmail.com",
-                                "Payment Successful",
-                                "Your payment of ₹" + p.getAmount() + " for Bill " + p.getBillId() + " was successful. Trans ID: " + p.getTransactionId()
+                            "yxsh2999@gmail.com",
+                            "Payment Successful",
+                            "Payment of Rs. " + savedPayment.getAmount() + " successful. Ref: " + savedPayment.getTransactionId()
                         );
                         kafkaTemplate.send("notification-topic", email);
+
+                        return Mono.just(savedPayment);
                     });
                 });
     }
-	
-	@Override
+
+    @Override
     public Flux<Payment> getSuccessfulPayments() {
         return paymentRepo.findByStatus("SUCCESS");
     }
-	
-	@Data
-	static class BillDTO {
-		private String id;
-		private Double totalAmount;
-		private String status;
-	}
-	
-	@Data
-	@NoArgsConstructor
-	@AllArgsConstructor
-	static class EmailRequest {
-		private String to;
-		private String subject;
-		private String body;
-	}
+    
+    @Data
+    static class BillDTO {
+        private String id;
+        private Double totalAmount;
+        private String status;
+    }
+    
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    static class EmailRequest {
+        private String to;
+        private String subject;
+        private String body;
+    }
 }
