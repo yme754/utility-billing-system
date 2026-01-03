@@ -1,5 +1,6 @@
 package com.utility.auth.controller;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -7,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,11 +20,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.auth.dto.AuthRequest;
 import com.utility.auth.dto.AuthResponse;
+import com.utility.auth.dto.UserDto;
 import com.utility.auth.service.AuthService;
 import com.utility.auth.util.JwtUtil;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -59,6 +64,34 @@ public class AuthController {
 	@PreAuthorize("hasRole('ADMIN')")
     public Mono<ResponseEntity<AuthResponse>> createStaff(@RequestBody AuthRequest request) {      
 		return authService.createStaff(request, null).map(ResponseEntity::ok);
+    }
+	
+	@GetMapping("/admin/users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Flux<UserDto> getAllUsers() {
+        return authService.getAllUsers();
+    }
+
+	@PutMapping("/admin/users/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<AuthResponse>> approveUser(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> requestBody) {
+        
+        String role = requestBody.get("role");
+        return authService.approveUser(id, role)
+                .map(msg -> ResponseEntity.ok(AuthResponse.builder().message(msg).build()));
+    }
+
+	@PutMapping("/admin/users/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Mono<ResponseEntity<AuthResponse>> updateUserStatus(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> requestBody) {
+        
+        String status = requestBody.get("status");
+        return authService.updateUserStatus(id, status)
+                .map(msg -> ResponseEntity.ok(AuthResponse.builder().message(msg).build()));
     }
 	
 	@ExceptionHandler(WebExchangeBindException.class)

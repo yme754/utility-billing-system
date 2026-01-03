@@ -29,6 +29,9 @@ public class User implements UserDetails{
 	private List<String> roles;
 	private boolean active;
 	
+	@Builder.Default
+    private String status = "PENDING";
+	
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		return this.roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
 	}
