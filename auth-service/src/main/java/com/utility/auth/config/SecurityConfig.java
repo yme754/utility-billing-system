@@ -33,6 +33,7 @@ public class SecurityConfig {
         .authorizeExchange(exchanges -> exchanges            
             .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
             .pathMatchers("/auth/admin/**").hasRole("ADMIN")
+            .pathMatchers("/consumers/count").permitAll()
             .anyExchange().authenticated()
         )
         .authenticationManager(authenticationManager)
