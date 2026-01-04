@@ -17,7 +17,11 @@ public class NotificationListener {
 	
 	@KafkaListener(topics= "notification-topic", groupId = "notification-group")
 	public void handleNotification(EmailRequest emailRequest) {
-		log.info("Received Notification Request: {}", emailRequest.getSubject());
-		emailService.sendEmail(emailRequest);
+		try {
+	        log.info("Received Kafka Message for: {}", emailRequest.getTo());
+	        emailService.sendEmail(emailRequest);
+	    } catch (Exception e) {
+	        log.error("Error processing Kafka message: {}", e.getMessage());
+	    }
 	}
 }
