@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/consumers/tariffs")
 @RequiredArgsConstructor
 public class TariffController {    
-    private final TariffPlanRepository tariffRepo;
+	private final TariffPlanRepository tariffRepo;
 
     @PostMapping
     public Mono<ResponseEntity<TariffPlan>> createTariff(@RequestBody TariffPlan plan) {
@@ -25,5 +25,29 @@ public class TariffController {
             return tariffRepo.findByUtilityType(type);
         }
         return tariffRepo.findAll();
+    }
+
+    @PutMapping("/{id}")
+    public Mono<ResponseEntity<TariffPlan>> updateTariff(@PathVariable String id, @RequestBody TariffPlan plan) {
+        return tariffRepo.findById(id)
+                .flatMap(existing -> {
+                    existing.setPlanName(plan.getPlanName());
+                    existing.setDescription(plan.getDescription());
+                    existing.setUtilityType(plan.getUtilityType());
+                    existing.setCategory(plan.getCategory());                    
+                    existing.setBillingType(plan.getBillingType());
+                    existing.setBaseRate(plan.getBaseRate());
+                    existing.setFixedCharge(plan.getFixedCharge());
+                    existing.setSlabs(plan.getSlabs());
+                    return tariffRepo.save(existing);
+                })
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public Mono<ResponseEntity<Void>> deleteTariff(@PathVariable String id) {
+        return tariffRepo.deleteById(id)
+                .then(Mono.just(ResponseEntity.ok().<Void>build()));
     }
 }

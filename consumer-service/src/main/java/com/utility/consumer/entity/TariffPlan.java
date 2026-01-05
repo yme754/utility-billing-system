@@ -8,21 +8,26 @@ import lombok.Data;
 @Data
 @Document(collection = "tariff_plans")
 public class TariffPlan {
-    @Id
+	@Id
     private String id;
     private String utilityType;
-    private String category;    
-    private Double fixedCharge; 
-    private Double taxPercentage;
-    private String planName; 
-    private String description;    
-    private List<Slab> slabs;       
+    private String category;
+    private String billingType;
+    private String planName;      
+    private String description;   
+    private Double baseRate;
+    private Double fixedCharge;
+    private Double taxPercentage; 
+    private Double lateFeePerDay;
+    private Integer gracePeriodDays;
+    private List<Slab> slabs;
     
     @Data
     public static class Slab {
         private Integer minUnits;
-        private Integer maxUnits;        
-        private Double rate; 
-        private Double ratePerUnit;
+        private Integer maxUnits;
+        private Double rate;        
+        private Integer conditionMinTotal; 
+        private Integer conditionMaxTotal;
     }
 }
