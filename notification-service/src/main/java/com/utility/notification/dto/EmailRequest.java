@@ -13,4 +13,7 @@ public class EmailRequest {
 	private String to;
 	private String subject;
 	private String body;
+	private boolean isInvoice; 
+    private String billId;
+    private Double amount;
 }
