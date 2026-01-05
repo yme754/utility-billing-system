@@ -33,4 +33,10 @@ public class MeterController {
 	public Flux<MeterReading> getHistory(@PathVariable String meterId) {
 		return meterService.getReadingsByMeter(meterId);
 	}
+	
+	@GetMapping("/current-month")
+	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
+	public Flux<MeterReading> getCurrentMonthReadings() {
+	    return meterService.getReadingsForCurrentMonth();
+	}
 }

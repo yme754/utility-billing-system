@@ -1,5 +1,8 @@
 package com.utility.meter.repository;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,4 +15,5 @@ import reactor.core.publisher.Mono;
 public interface MeterReadingRepository extends ReactiveMongoRepository<MeterReading, String>{
 	Flux<MeterReading> findByMeterId(String meterId);
 	Mono<MeterReading> findTopByMeterIdOrderByDateDesc(String meterId);
+	Flux<MeterReading> findByDateBetween(LocalDate start, LocalDate end);
 }

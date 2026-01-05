@@ -8,4 +8,5 @@ import reactor.core.publisher.Mono;
 public interface MeterService {	
 	Mono<MeterReading> addReading(MeterReading meterReading);
 	Flux<MeterReading> getReadingsByMeter(String meterId);
+	Flux<MeterReading> getReadingsForCurrentMonth();
 }
