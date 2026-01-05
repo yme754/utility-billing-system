@@ -28,6 +28,10 @@ public class User implements UserDetails{
 	private String password;
 	private List<String> roles;
 	private boolean active;
+	private String firstName;
+    private String lastName;
+    private String phoneNumber;
+    private String address;
 	
 	@Builder.Default
     private String status = "PENDING";
