@@ -6,14 +6,21 @@ import lombok.Data;
 
 @Data
 public class TariffDTO {
-	private Double fixedCharge;
-	private Double taxPercentage;
-	private List<Slab> slabs;
-	
-	@Data
-	public static class Slab {
-		private Integer minUnits;
-		private Integer maxUnits;
-		private Double ratePerUnit;
-	}
+	private String id;
+    private String utilityType;
+    private String billingType;
+    private Double baseRate;
+    private Double fixedCharge;
+    private Double taxPercentage;
+    private Double lateFeePerDay;
+    private Integer gracePeriodDays;
+    private List<Slab> slabs;
+
+    @Data
+    public static class Slab {
+        private Integer minUnits;
+        private Integer maxUnits;
+        private Double rate; 
+        private Double ratePerUnit;
+    }
 }

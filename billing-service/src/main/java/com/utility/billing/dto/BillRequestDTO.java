@@ -7,4 +7,5 @@ public class BillRequestDTO {
 	private String connectionId;
     private String meterId;
     private String utilityName;
+    private Double units;
 }

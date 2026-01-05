@@ -25,9 +25,9 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/bills")
 @RequiredArgsConstructor
 public class BillingController {
-	private final BillingService billingService;
-	
-	@PostMapping("/generate")
+private final BillingService billingService;
+    
+    @PostMapping("/generate")
     @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
     public Mono<ResponseEntity<Bill>> generateBill(@RequestBody BillRequestDTO request,
             @RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
@@ -38,21 +38,21 @@ public class BillingController {
                 token
         ).map(ResponseEntity::ok);
     }
-	
-	@GetMapping("/{id}")
-	@PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
-	public Mono<ResponseEntity<Bill>> getBill(@PathVariable String id) {
-		return billingService.getBill(id).map(ResponseEntity::ok);
-	}
-	
-	@PutMapping("/{id}/status")
-	@PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNTS_OFFICER', 'CONSUMER')")
-	public Mono<ResponseEntity<Void>> updateBillStatus(@PathVariable String id, @RequestParam String status) {
-		return billingService.updateBillStatus(id, status)
+    
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER', 'ACCOUNTS_OFFICER', 'CONSUMER')")
+    public Mono<ResponseEntity<Bill>> getBill(@PathVariable String id) {
+        return billingService.getBill(id).map(ResponseEntity::ok);
+    }
+    
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ACCOUNTS_OFFICER', 'CONSUMER')")
+    public Mono<ResponseEntity<Void>> updateBillStatus(@PathVariable String id, @RequestParam String status) {
+        return billingService.updateBillStatus(id, status)
                 .map(v -> ResponseEntity.ok().<Void>build());
-	}
-	
-	@GetMapping("/pending")
+    }
+    
+    @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
     public Mono<ResponseEntity<Flux<Bill>>> getPendingBills() {
         return Mono.just(ResponseEntity.ok(billingService.getPendingBills()));
@@ -68,5 +68,18 @@ public class BillingController {
     @PreAuthorize("hasAnyRole('CONSUMER')")
     public Mono<ResponseEntity<Void>> payBill(@PathVariable String id, @RequestParam String mode) {
         return billingService.payBill(id, mode).map(v -> ResponseEntity.ok().<Void>build());
+    }
+    
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')") 
+    public Mono<ResponseEntity<Flux<Bill>>> getAllBills() {
+        return Mono.just(ResponseEntity.ok(billingService.getAllBills()));
+    }
+    
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
+    public Mono<ResponseEntity<Void>> cancelBill(@PathVariable String id, @RequestParam String reason) {
+        return billingService.cancelBill(id, reason)
+                .map(v -> ResponseEntity.ok().<Void>build());
     }
 }

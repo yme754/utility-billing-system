@@ -14,6 +14,7 @@ public interface BillRepository extends ReactiveMongoRepository<Bill, String>{
 	Flux<Bill> findByStatus(String status);
     Flux<Bill> findByConnectionId(String connectionId);
     Mono<Long> countByStatus(String status);
+    Mono<Bill> findFirstByConnectionIdOrderByBillingDateDesc(String connectionId);
     @Aggregation("{ $match: { status: 'PAID' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }")
     Mono<RevenueResult> sumTotalRevenue();
 

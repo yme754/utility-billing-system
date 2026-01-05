@@ -17,16 +17,21 @@ import lombok.NoArgsConstructor;
 @Document(collection = "bills")
 public class Bill {
 	@Id
-	private String id;
-	private String connectionId;
-	private String meterId;
-	private LocalDate billingDate;
-	private LocalDate dueDate;
-	private Double ratePerUnit;
-	private Double fixedCharge;
-	private Double amount;
-	private Double taxAmount;
-	private Double totalAmount;
-	private Double unitsConsumed;
-	private String status;
+    private String id;
+    private String connectionId;
+    private String meterId;
+    private LocalDate billingDate;
+    private LocalDate dueDate;    
+    private Double previousReading;
+    private Double currentReading;
+    private Double unitsConsumed;
+    private Double ratePerUnit;
+    private Double fixedCharge;
+    private Double taxAmount;
+    private Double amount;
+    private Double totalAmount;
+    private String status;
+    private Double fineAmount; 
+    private Double lateFeePerDay; 
+    private Integer gracePeriod;
 }

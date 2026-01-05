@@ -2,6 +2,7 @@ package com.utility.billing.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,168 +31,195 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class BillingServiceImpl implements BillingService{
 	private final WebClient.Builder webClientBuilder;
-	private final BillRepository billRepo;
-	private final KafkaTemplate<String, Object> kafkaTemplate;
-	private final TransactionRepository transactionRepo;
-	
-	@Override
-    public Mono<Bill> generateAutomatedBill(MeterReadingEvent event) {
-        String utilityType = "ELECTRICITY"; 
-        Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
-                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=" + utilityType)
-                .retrieve()
-                .bodyToFlux(TariffDTO.class)
-                .next()
-                .switchIfEmpty(Mono.error(new RuntimeException("No Tariff found")));
-        return tariffMono.flatMap(tariff -> {
-            return calculateAndSaveBill(
-                event.getConnectionId(),
-                event.getMeterId(),
-                event.getUnitsConsumed(),
-                tariff
-            );
-        });
-    }
+    private final BillRepository billRepo;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final TransactionRepository transactionRepo;
 
-	private Mono<Bill> calculateAndSaveBill(String connId, String meterId, Double units, TariffDTO tariff) {
-        double consumedUnits = (units != null) ? units : 0.0;        
-        double rate = 0.0;
-        if (tariff.getSlabs() != null) {
-            rate = tariff.getSlabs().stream()
-                .filter(slab -> consumedUnits >= slab.getMinUnits() && consumedUnits <= slab.getMaxUnits())
-                .findFirst()
-                .map(TariffDTO.Slab::getRatePerUnit)
-                .orElse(0.0);
-        }
-        double energyCharge = consumedUnits * rate;
-        double fixedCharge = (tariff.getFixedCharge() != null) ? tariff.getFixedCharge() : 0.0;
-        double taxPercent = (tariff.getTaxPercentage() != null) ? tariff.getTaxPercentage() : 0.0;
-        
-        double tax = (energyCharge + fixedCharge) * (taxPercent / 100);
-        double total = energyCharge + fixedCharge + tax;
-        Bill bill = Bill.builder()
-                .connectionId(connId)
-                .meterId(meterId)
-                .billingDate(LocalDate.now())
-                .dueDate(LocalDate.now().plusDays(15))
-                .unitsConsumed(consumedUnits)
-                .ratePerUnit(rate)
-                .fixedCharge(fixedCharge)
-                .taxAmount(tax)
-                .amount(energyCharge)
-                .totalAmount(total)
-                .status("UNPAID")
-                .build();
-        return billRepo.save(bill)
-                .flatMap(savedBill -> {
-                    log.info("Bill Saved: ID={}", savedBill.getId());
-                    EmailRequest email = new EmailRequest(
-                        "yxsh2999@gmail.com", 
-                        "New Bill Generated", 
-                        "Bill of Rs." + savedBill.getTotalAmount() + " generated."
-                    );
-                    return Mono.fromFuture(kafkaTemplate.send("notification-topic", email))
-                            .onErrorResume(e -> {
-                                log.warn("Notification Skipped (Kafka Down): {}", e.getMessage());
-                                return Mono.empty(); 
-                            })
-                            .thenReturn(savedBill);
-                });
-    }
-
-	@Override
+    @Override
     public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token) {
-        log.info("Starting Manual Bill Gen: Meter: {}, Utility: {}", meterId, utilityName);
-        Mono<MeterReadingDTO> readingMono = webClientBuilder.build().get()
+        log.info("Generating bill for Meter: {}", meterId);
+        return webClientBuilder.build().get()
                 .uri("http://METER-SERVICE/readings/" + meterId)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToFlux(MeterReadingDTO.class)
                 .last()
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Readings found for Meter: " + meterId)));
-        Mono<TariffDTO> tariffMono = webClientBuilder.build().get()
-                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=" + utilityName)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Meter Reading found for " + meterId)))
+                .flatMap(reading -> 
+                    fetchTariffAndCalculate(connectionId, meterId, utilityName, reading.getUnitsConsumed(), token)
+                );
+    }
+    
+    private Mono<Bill> fetchTariffAndCalculate(String connId, String meterId, String utility, Double currentReading, String token) {
+        return webClientBuilder.build().get()
+                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=" + utility)
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .retrieve()
                 .bodyToFlux(TariffDTO.class)
-                .next()
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Tariff found for Utility: " + utilityName)));
-        return Mono.zip(readingMono, tariffMono)
-                .flatMap(tuple -> {
-                    MeterReadingDTO reading = tuple.getT1();
-                    TariffDTO tariff = tuple.getT2();
-                    if (tariff == null || tariff.getSlabs() == null || tariff.getSlabs().isEmpty()) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Tariff Configuration is Invalid or Empty"));
-                    }
-                    log.info("Calculation: {} units for Utility: {}", reading.getUnitsConsumed(), utilityName);
-                    return calculateAndSaveBill(connectionId, meterId, reading.getUnitsConsumed(), tariff);
-                })
-                .doOnError(e -> log.error("Billing Failed: {}", e.getMessage()));
+                .next() 
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "No Tariff Plan found for " + utility)))
+                .flatMap(tariff -> 
+                    billRepo.findFirstByConnectionIdOrderByBillingDateDesc(connId)
+                            .map(Bill::getCurrentReading)
+                            .defaultIfEmpty(0.0)
+                            .flatMap(prevReading -> calculateAndSave(connId, meterId, prevReading, currentReading, tariff))
+                );
+    }
+
+    private Mono<Bill> calculateAndSave(String connId, String meterId, Double prev, Double curr, TariffDTO tariff) {
+        double consumed = Math.max(0, curr - prev);
+        double energyCharge = calculateEnergyCharge(consumed, tariff);
+        double fixed = tariff.getFixedCharge() != null ? tariff.getFixedCharge() : 0.0;
+        double taxPercent = tariff.getTaxPercentage() != null ? tariff.getTaxPercentage() : 0.0;
+        double taxAmount = (energyCharge + fixed) * (taxPercent / 100);
+        double baseAmount = energyCharge + fixed + taxAmount;
+        LocalDate today = LocalDate.now();
+        LocalDate dueDate = today.plusDays(30);         
+        double lateFee = tariff.getLateFeePerDay() != null ? tariff.getLateFeePerDay() : 0.0;
+        int grace = tariff.getGracePeriodDays() != null ? tariff.getGracePeriodDays() : 0;
+        Bill bill = Bill.builder()
+                .connectionId(connId).meterId(meterId)
+                .billingDate(today).dueDate(dueDate)
+                .previousReading(prev).currentReading(curr).unitsConsumed(consumed)
+                .ratePerUnit(consumed > 0 ? energyCharge / consumed : 0)
+                .fixedCharge(fixed).taxAmount(taxAmount)
+                .amount(baseAmount)      
+                .fineAmount(0.0)         
+                .totalAmount(baseAmount)                 
+                .lateFeePerDay(lateFee)
+                .gracePeriod(grace)
+                .status("UNPAID")
+                .build();
+        return billRepo.save(bill).flatMap(saved -> {
+            sendInvoiceNotification(saved, consumed, baseAmount);
+            return Mono.just(saved);
+        });
+    }
+
+    private double calculateEnergyCharge(double consumed, TariffDTO tariff) {
+        String type = tariff.getBillingType() != null ? tariff.getBillingType() : "METERED";
+        
+        if ("METERED".equalsIgnoreCase(type)) {
+            if (tariff.getSlabs() != null && !tariff.getSlabs().isEmpty()) {
+                double rate = tariff.getSlabs().stream()
+                    .filter(s -> consumed >= s.getMinUnits() && consumed <= s.getMaxUnits())
+                    .findFirst()
+                    .map(s -> s.getRate() != null ? s.getRate() : (s.getRatePerUnit() != null ? s.getRatePerUnit() : 0.0))
+                    .orElse(0.0);
+                return consumed * rate;
+            } else {
+                return consumed * (tariff.getBaseRate() != null ? tariff.getBaseRate() : 0.0);
+            }
+        } else {
+            double baseRate = tariff.getBaseRate() != null ? tariff.getBaseRate() : 0.0;
+            return (consumed > 0 ? consumed : 1) * baseRate; 
+        }
+    }
+
+    public Mono<Bill> checkAndApplyFine(Bill bill) {
+        if ("PAID".equals(bill.getStatus()) || "CANCELLED".equals(bill.getStatus())) {
+            return Mono.just(bill);
+        }
+        long daysLate = ChronoUnit.DAYS.between(bill.getDueDate(), LocalDate.now());        
+        int grace = bill.getGracePeriod() != null ? bill.getGracePeriod() : 0;
+        double finePerDay = bill.getLateFeePerDay() != null ? bill.getLateFeePerDay() : 0.0;
+        double newFine = 0.0;
+        if (daysLate > grace) {
+            newFine = (daysLate - grace) * finePerDay;
+        }
+        double currentFine = bill.getFineAmount() != null ? bill.getFineAmount() : 0.0;
+        if (Double.compare(newFine, currentFine) != 0) {
+            bill.setFineAmount(newFine);
+            bill.setTotalAmount(bill.getAmount() + newFine);
+            bill.setStatus("OVERDUE");
+            return billRepo.save(bill);
+        }
+        return Mono.just(bill);
     }
     
+    @Override 
+    public Mono<Bill> getBill(String id) { 
+        return billRepo.findById(id)
+                .flatMap(this::checkAndApplyFine);
+    }
+
     @Override
-    public Mono<AdminStatsDTO> getAdminStats(String token) {        
-        Mono<Long> consumerCountMono = webClientBuilder.build().get()
+    public Mono<Void> cancelBill(String id, String reason) {
+        return billRepo.findById(id)
+            .flatMap(bill -> {
+                if ("PAID".equals(bill.getStatus())) {
+                    return Mono.error(new RuntimeException("Cannot cancel a PAID bill"));
+                }
+                bill.setStatus("CANCELLED");
+                return billRepo.save(bill);
+            }).then();
+    }
+
+    private void sendInvoiceNotification(Bill saved, double consumed, double total) {
+        try {
+            EmailRequest email = EmailRequest.builder()
+                    .to("yxsh2999@gmail.com") 
+                    .subject("New Utility Invoice - " + LocalDate.now().getMonth())
+                    .body("Consumption: " + consumed + " units. Total: ₹" + total)
+                    .isInvoice(true)
+                    .billId(saved.getId())
+                    .amount(total)
+                    .build();
+            kafkaTemplate.send("notification-topic", email);
+        } catch (Exception e) {
+            log.error("Failed to queue email notification", e);
+        }
+    }
+
+    @Override
+    public Flux<Bill> getAllBills() {
+        return billRepo.findAll()
+                .flatMap(this::checkAndApplyFine);
+    }
+
+    @Override
+    public Mono<Bill> generateAutomatedBill(MeterReadingEvent event) {
+        return webClientBuilder.build().get()
+                .uri("http://CONSUMER-SERVICE/consumers/tariffs?type=ELECTRICITY")
+                .retrieve()
+                .bodyToFlux(TariffDTO.class).next()
+                .flatMap(t -> {
+                    return billRepo.findFirstByConnectionIdOrderByBillingDateDesc(event.getConnectionId())
+                            .map(Bill::getCurrentReading).defaultIfEmpty(0.0)
+                            .flatMap(prev -> calculateAndSave(event.getConnectionId(), event.getMeterId(), prev, event.getUnitsConsumed(), t));
+                });
+    }
+
+    @Override
+    public Mono<AdminStatsDTO> getAdminStats(String token) {
+        Mono<Long> consumerCount = webClientBuilder.build().get()
                 .uri("http://CONSUMER-SERVICE/consumers/count")
                 .header(HttpHeaders.AUTHORIZATION, token)
-                .retrieve()
-                .bodyToMono(Long.class)
-                .onErrorReturn(0L); 
-        Mono<Long> pendingBillsMono = billRepo.countByStatus("UNPAID");
-        Mono<Double> revenueMono = billRepo.sumTotalRevenue()
-                .map(result -> result.getTotal() != null ? result.getTotal() : 0.0)
-                .defaultIfEmpty(0.0);
-        return Mono.zip(consumerCountMono, revenueMono, pendingBillsMono)
-                .map(tuple -> AdminStatsDTO.builder()
-                        .totalConsumers(tuple.getT1())
-                        .totalRevenue(tuple.getT2())
-                        .pendingBills(tuple.getT3())
-                        .build());
+                .retrieve().bodyToMono(Long.class).onErrorReturn(0L);
+        Mono<Long> pending = billRepo.countByStatus("UNPAID");
+        Mono<Double> revenue = billRepo.sumTotalRevenue()
+                .map(res -> res.getTotal() != null ? res.getTotal() : 0.0).defaultIfEmpty(0.0);
+        return Mono.zip(consumerCount, revenue, pending)
+                .map(t -> new AdminStatsDTO(t.getT1(), t.getT2(), t.getT3()));
     }
-    
-    @Override
-	public Mono<Void> payBill(String billId, String paymentMode) {
-		return billRepo.findById(billId)
-		    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
-		    .flatMap(bill -> {
-		        if ("PAID".equals(bill.getStatus())) return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bill is already paid"));            
-		        bill.setStatus("PAID");            
-		        Transaction transaction = Transaction.builder()
-		                .billId(bill.getId())
-		                .amount(bill.getTotalAmount())
-		                .paymentMode(paymentMode)
-		                .transactionReference("TXN-" + System.currentTimeMillis()) 
-		                .timestamp(LocalDateTime.now())
-		                .status("SUCCESS")
-		                .build();
-		        return transactionRepo.save(transaction)
-		                .then(billRepo.save(bill));
-		    })
-		    .then();
-	}
 
     @Override
-	public Mono<Bill> getBill(String billId) {
-		return billRepo.findById(billId);
-	}
+    public Mono<Void> payBill(String billId, String paymentMode) {
+        return billRepo.findById(billId)
+                .flatMap(bill -> {
+                    bill.setStatus("PAID");
+                    Transaction tx = Transaction.builder()
+                            .billId(bill.getId()).amount(bill.getTotalAmount())
+                            .paymentMode(paymentMode).status("SUCCESS")
+                            .timestamp(LocalDateTime.now())
+                            .transactionReference("TXN-" + System.currentTimeMillis()).build();
+                    return transactionRepo.save(tx).then(billRepo.save(bill));
+                }).then();
+    }
 
-	@Override
-	public Mono<Void> updateBillStatus(String id, String status) {
-		return billRepo.findById(id)
-				.switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
-				.flatMap(bill -> {
-					bill.setStatus(status);
-					return billRepo.save(bill);
-				}).then();
-	}
-
-	@Override
-	public Flux<Bill> getPendingBills() {
-		return billRepo.findByStatus("UNPAID");
-	}
-
-	@Override
-	public Flux<Bill> getBillsByConnection(String connectionId) {
-		return billRepo.findByConnectionId(connectionId);
-	}
+    @Override public Flux<Bill> getPendingBills() { return billRepo.findByStatus("UNPAID"); }
+    @Override public Flux<Bill> getBillsByConnection(String cid) { return billRepo.findByConnectionId(cid); }
+    @Override public Mono<Void> updateBillStatus(String id, String s) { 
+        return billRepo.findById(id).flatMap(b -> { b.setStatus(s); return billRepo.save(b); }).then(); 
+    }
 }
