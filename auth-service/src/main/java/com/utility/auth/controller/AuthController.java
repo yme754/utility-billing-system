@@ -1,5 +1,6 @@
 package com.utility.auth.controller;
 
+import java.security.Principal;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -72,7 +73,8 @@ public class AuthController {
     
     @GetMapping("/validate")
     public Mono<String> validateToken(@RequestParam("token") String token) {
-        return Mono.just(jwtUtil.validateToken(token) ? "VALID" : "INVALID");
+    	boolean isValid = Boolean.TRUE.equals(jwtUtil.validateToken(token));
+        return Mono.just(isValid ? "VALID" : "INVALID");
     }
     
     @PostMapping("/create-staff")
@@ -107,6 +109,27 @@ public class AuthController {
         String status = requestBody.get("status");
         return authService.updateUserStatus(id, status)
                 .map(msg -> ResponseEntity.ok(AuthResponse.builder().message(msg).build()));
+    }
+    
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ResponseEntity<AuthResponse>> changePassword(
+            @RequestBody Map<String, String> passwords, 
+            Principal principal) {
+        
+        String currentPassword = passwords.get("currentPassword");
+        String newPassword = passwords.get("newPassword");
+        String username = principal.getName();
+
+        return authService.updatePassword(username, currentPassword, newPassword)
+                .then(Mono.just(ResponseEntity.ok(
+                    AuthResponse.builder().message("Password changed successfully").build()
+                )))
+                .onErrorResume(e -> Mono.just(
+                    ResponseEntity.badRequest().body(
+                        AuthResponse.builder().message(e.getMessage()).build()
+                    )
+                ));
     }
     
     @ExceptionHandler(WebExchangeBindException.class)

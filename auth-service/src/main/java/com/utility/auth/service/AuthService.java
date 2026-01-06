@@ -16,4 +16,5 @@ public interface AuthService {
 	Mono<String> approveUser(String id, String role);
 	Mono<String> updateUserStatus(String id, String status);
 	Mono<User> findByUsername(String username);
+	Mono<Void> updatePassword(String username, String currentPassword, String newPassword);
 }

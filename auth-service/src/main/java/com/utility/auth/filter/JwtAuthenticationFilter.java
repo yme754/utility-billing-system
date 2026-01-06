@@ -1,7 +1,6 @@
 package com.utility.auth.filter;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,10 +15,12 @@ import com.utility.auth.util.JwtUtil;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter implements WebFilter{
 	private final JwtUtil jwtUtil;
 
@@ -29,20 +30,25 @@ public class JwtAuthenticationFilter implements WebFilter{
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             try {
-                if (jwtUtil.validateToken(token)) {
+                if (Boolean.TRUE.equals(jwtUtil.validateToken(token))) {
                     Claims claims = jwtUtil.getAllClaimsFromToken(token);
                     String username = claims.getSubject();                    
+                    
+                    @SuppressWarnings("unchecked")
                     List<String> roles = claims.get("roles", List.class);
+                    
                     List<SimpleGrantedAuthority> authorities = roles.stream()
                             .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
+                            .toList();
+
                     UsernamePasswordAuthenticationToken authentication = 
                             new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    
                     return chain.filter(exchange)
                             .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication));
                 }
             } catch (Exception e) {
-                System.err.println("JWT Validation failed: " + e.getMessage());
+                log.error("JWT Validation failed: {}", e.getMessage());
             }
         }
         return chain.filter(exchange);

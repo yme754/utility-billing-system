@@ -7,9 +7,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.config.web.server.ServerHttpSecurity.CsrfSpec;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.ServerSecurityContextRepository;
 
@@ -27,19 +27,19 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) throws Exception{
-    	http
-        .csrf(csrf -> csrf.disable())
-        .authorizeExchange(exchanges -> exchanges            
-            .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
-            .pathMatchers("/auth/admin/**").hasRole("ADMIN")
-            .pathMatchers("/consumers/count").permitAll()
-            .anyExchange().authenticated()
-        )
-        .authenticationManager(authenticationManager)
-        .securityContextRepository(securityContextRepository)        
-        .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION);
-    return http.build();
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+            .csrf(CsrfSpec::disable)
+            .authorizeExchange(exchanges -> exchanges            
+                .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
+                .pathMatchers("/auth/admin/**").hasRole("ADMIN")
+                .pathMatchers("/consumers/count").permitAll()
+                .anyExchange().authenticated()
+            )
+            .authenticationManager(authenticationManager)
+            .securityContextRepository(securityContextRepository)        
+            .addFilterAt(jwtAuthFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+            .build();
     }
 
     @Bean

@@ -14,7 +14,6 @@ import com.utility.auth.dto.UserDto;
 import com.utility.auth.entity.User;
 import com.utility.auth.repository.UserRepository;
 import com.utility.auth.util.JwtUtil;
-import com.utility.common.event.UserRegisteredEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,36 +28,41 @@ import com.utility.notification.dto.EmailRequest;
 public class AuthServiceImpl implements AuthService{
 	private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;    
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String NOTIFICATION_TOPIC = "notification-topic";
+    private static final String ADMIN_EMAIL = "yxsh2999@gmail.com";
     
     @Override
     public Mono<User> register(User user) {
-        return userRepo.existsByUsername(user.getUsername())
-            .flatMap(usernameExists -> {
-                if (usernameExists) {
-                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken"));
-                }
-                return userRepo.existsByEmail(user.getEmail());
-            })
-            .flatMap(emailExists -> {
-                if (emailExists) {
-                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered"));
-                }
-                return userRepo.existsByPhoneNumber(user.getPhoneNumber());
-            })
-            .flatMap(phoneExists -> {
-                if (phoneExists) {
-                    return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already registered"));
-                }
-                user.setPassword(passwordEncoder.encode(user.getPassword()));
-                user.setRoles(List.of("ROLE_CONSUMER"));
-                user.setActive(false);
-                user.setStatus("PENDING");
-                return userRepo.save(user);
-            })
-            .doOnSuccess(this::sendRegistrationNotifications);
-    }
+    	return userRepo.existsByUsername(user.getUsername())
+                .flatMap(usernameExists -> {
+                    if (Boolean.TRUE.equals(usernameExists)) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken"));
+                    }
+                    return userRepo.existsByEmail(user.getEmail());
+                })
+                .flatMap(emailExists -> {
+                    if (Boolean.TRUE.equals(emailExists)) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered"));
+                    }
+                    return userRepo.existsByPhoneNumber(user.getPhoneNumber());
+                })
+                .flatMap(phoneExists -> {
+                    if (Boolean.TRUE.equals(phoneExists)) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already registered"));
+                    }
+                    user.setPassword(passwordEncoder.encode(user.getPassword()));
+                    user.setRoles(List.of("ROLE_CONSUMER"));
+                    user.setActive(false);
+                    user.setStatus(STATUS_PENDING);
+                    return userRepo.save(user);
+                })
+                .doOnSuccess(this::sendRegistrationNotifications);
+        }
     
     @Override
     public Mono<AuthResponse> login(AuthRequest request) {
@@ -91,7 +95,7 @@ public class AuthServiceImpl implements AuthService{
                             .password(passwordEncoder.encode(request.getPassword()))
                             .roles(rolesToAssign)
                             .active(true)
-                            .status("ACTIVE") 
+                            .status(STATUS_ACTIVE) 
                             .build();
                     return userRepo.save(staffUser);
                 }))
@@ -114,36 +118,44 @@ public class AuthServiceImpl implements AuthService{
         return userRepo.findById(id)
                 .flatMap(user -> {
                     user.setRoles(List.of(role.startsWith("ROLE_") ? role : "ROLE_" + role));
-                    user.setStatus("ACTIVE");
+                    user.setStatus(STATUS_ACTIVE);
                     user.setActive(true);
                     return userRepo.save(user);
                 })
                 .doOnSuccess(user -> {
                     EmailRequest approvalMail = EmailRequest.builder()
-                            .to("yxsh2999@gmail.com")
+                            .to(ADMIN_EMAIL)
                             .subject("Account Approved - Utilix")
                             .body("Great news " + user.getUsername() + "!\n\nYour account has been approved as " + user.getRoles().get(0) + 
                                   ". You can now access all features.\n\nLogin now: http://localhost:4200/login")
                             .build();
-                    kafkaTemplate.send("notification-topic", approvalMail);
+                    kafkaTemplate.send(NOTIFICATION_TOPIC, approvalMail);
                 })
                 .map(savedUser -> "User approved successfully");
     }
 
     @Override
     public Mono<String> updateUserStatus(String id, String status) {
-        return userRepo.findById(id)
+    	return userRepo.findById(id)
                 .switchIfEmpty(Mono.error(new RuntimeException("User not found")))
                 .flatMap(user -> {
-                    user.setStatus(status);                    
-                    if ("ACTIVE".equalsIgnoreCase(status)) {
-                        user.setActive(true);
-                    } else {
-                        user.setActive(false);
-                    }
+                    user.setStatus(status);
+                    user.setActive(STATUS_ACTIVE.equalsIgnoreCase(status));
                     return userRepo.save(user);
                 })
                 .map(savedUser -> "User status updated to " + status);
+    }
+    
+    @Override
+    public Mono<Void> updatePassword(String username, String currentPassword, String newPassword) {
+        return userRepo.findByUsername(username)
+                .flatMap(user -> {
+                    if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                        return Mono.error(new RuntimeException("Current password does not match"));
+                    }
+                    user.setPassword(passwordEncoder.encode(newPassword));
+                    return userRepo.save(user);
+                }).then();
     }
 
     private UserDto mapToDto(User user) {
@@ -152,26 +164,26 @@ public class AuthServiceImpl implements AuthService{
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .roles(user.getRoles())
-                .status(user.getStatus() != null ? user.getStatus() : "PENDING")
+                .status(user.getStatus() != null ? user.getStatus() : STATUS_PENDING)
                 .build();
     }
     
     private void sendRegistrationNotifications(User user) {
         EmailRequest userMail = EmailRequest.builder()
-                .to("yxsh2999@gmail.com") 
+                .to(ADMIN_EMAIL) 
                 .subject("Registration Received - Utilix")
                 .body("Hello " + user.getUsername() + ",\n\nYour registration is confirmed. " +
                       "You will be notified once the admin approves your account.\n\n" +
                       "Login here: http://localhost:4200/login")
                 .build();
         EmailRequest adminMail = EmailRequest.builder()
-                .to("yxsh2999@gmail.com") 
+                .to(ADMIN_EMAIL) 
                 .subject("New User Alert: " + user.getUsername())
                 .body("A new user has registered: " + user.getUsername() + " (" + user.getEmail() + ").\n\n" +
                       "Review here: http://localhost:4200/admin/manage-users")
                 .build();
-        kafkaTemplate.send("notification-topic", userMail);
-        kafkaTemplate.send("notification-topic", adminMail);
+        kafkaTemplate.send(NOTIFICATION_TOPIC, userMail);
+        kafkaTemplate.send(NOTIFICATION_TOPIC, adminMail);
         log.info("Kafka events published: 1 to User ({}), 1 to Admin", user.getEmail());
     }
     
