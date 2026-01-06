@@ -2,8 +2,10 @@ package com.utility.billing.dto;
 
 import java.util.List;
 
+import lombok.Builder;
 import lombok.Data;
 
+@Builder
 @Data
 public class TariffDTO {
 	private String id;
@@ -15,6 +17,8 @@ public class TariffDTO {
     private Double lateFeePerDay;
     private Integer gracePeriodDays;
     private List<Slab> slabs;
+    private String planName;
+    private String category;
 
     @Data
     public static class Slab {

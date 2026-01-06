@@ -71,7 +71,6 @@ private final BillingService billingService;
     }
     
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')") 
     public Mono<ResponseEntity<Flux<Bill>>> getAllBills() {
         return Mono.just(ResponseEntity.ok(billingService.getAllBills()));
     }
@@ -80,6 +79,13 @@ private final BillingService billingService;
     @PreAuthorize("hasAnyRole('ADMIN', 'BILLING_OFFICER')")
     public Mono<ResponseEntity<Void>> cancelBill(@PathVariable String id, @RequestParam String reason) {
         return billingService.cancelBill(id, reason)
+                .map(v -> ResponseEntity.ok().<Void>build());
+    }
+    
+    @PostMapping("/{id}/reminder")
+    @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
+    public Mono<ResponseEntity<Void>> sendReminder(@PathVariable String id) {
+        return billingService.sendPaymentReminder(id)
                 .map(v -> ResponseEntity.ok().<Void>build());
     }
 }

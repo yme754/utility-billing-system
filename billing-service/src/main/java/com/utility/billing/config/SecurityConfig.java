@@ -27,6 +27,7 @@ public class SecurityConfig {
             .securityContextRepository(securityContextRepository)
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/actuator/**").permitAll()
+                .pathMatchers("/bills/all").permitAll()
                 .anyExchange().authenticated()
             )
             .build();

@@ -1,7 +1,5 @@
 package com.utility.billing.service;
 
-import org.springframework.http.ResponseEntity;
-
 import com.utility.billing.dto.AdminStatsDTO;
 import com.utility.billing.dto.MeterReadingEvent;
 import com.utility.billing.entity.Bill;
@@ -20,4 +18,5 @@ public interface BillingService {
     Mono<Bill> generateAutomatedBill(MeterReadingEvent event);
     Flux<Bill> getAllBills();
 	Mono<Void> cancelBill(String id, String reason);
+	Mono<Void> sendPaymentReminder(String billId);
 }

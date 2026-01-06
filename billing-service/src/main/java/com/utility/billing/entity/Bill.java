@@ -1,6 +1,7 @@
 package com.utility.billing.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -34,4 +35,9 @@ public class Bill {
     private Double fineAmount; 
     private Double lateFeePerDay; 
     private Integer gracePeriod;
+    private LocalDateTime lastReminderSent;
+    private String utilityType;
+    private String tariffPlanName;
+    private String paymentMode;
+    private LocalDateTime paymentDate;
 }
