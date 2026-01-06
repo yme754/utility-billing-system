@@ -1,5 +1,7 @@
 package com.utility.payment.controller;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,4 +39,9 @@ public class PaymentController {
         return Mono.just(ResponseEntity.ok(paymentService.getSuccessfulPayments()));
     }
 	
+	@GetMapping("/stats")
+    @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
+    public Mono<ResponseEntity<Map<String, Object>>> getAccountStats() {
+        return paymentService.getAccountStats().map(ResponseEntity::ok);
+    }
 }
