@@ -1,0 +1,48 @@
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nav-tabs .nav-link.active-tab {
+  background-color: #0d6efd;
+  color: white !important;
+  box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
+}
+
+.viewport-height {
+  height: calc(100vh - 190px); 
+  display: flex;
+  flex-direction: column;
+}
+
+.h-100-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8f9fa;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-white {
+  background: white;
+  border: 1px solid #dee2e6;
+  color: #333;
+}
+.btn-white:hover {
+  background: #f8f9fa;
+}

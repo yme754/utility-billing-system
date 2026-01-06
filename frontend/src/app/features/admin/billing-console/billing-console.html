@@ -1,0 +1,204 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'Billing & Meters'"></app-navbar>
+
+    <div class="container-fluid p-4 d-flex flex-column h-100">
+
+      <ul class="nav nav-tabs border-0 mb-3 flex-shrink-0">
+        <li class="nav-item">
+          <button class="nav-link border-0 px-4 py-2 rounded-pill me-2 fw-medium" 
+             [class.active-tab]="activeTab === 'meters'" 
+             [class.text-muted]="activeTab !== 'meters'"
+             (click)="activeTab = 'meters'">
+             <i class="bi bi-speedometer2 me-2"></i> Meter Registry
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link border-0 px-4 py-2 rounded-pill fw-medium" 
+             [class.active-tab]="activeTab === 'history'" 
+             [class.text-muted]="activeTab !== 'history'"
+             (click)="activeTab = 'history'">
+             <i class="bi bi-clock-history me-2"></i> Billing History
+          </button>
+        </li>
+      </ul>
+
+      <div *ngIf="message" class="alert mb-3 rounded-4 d-flex align-items-center flex-shrink-0" 
+           [ngClass]="isError ? 'alert-danger' : 'alert-success'">
+        <i class="bi me-2" [ngClass]="isError ? 'bi-exclamation-circle' : 'bi-check-circle-fill'"></i>
+        {{ message }}
+      </div>
+
+      <div class="viewport-height animate-fade-in">
+
+        <div *ngIf="activeTab === 'meters'" class="h-100 d-flex flex-column">
+          
+          <div *ngIf="selectedMeter" class="card border-0 shadow-sm rounded-4 mb-3 bg-primary-subtle flex-shrink-0">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-primary mb-0">
+                  <i class="bi bi-pencil-square me-2"></i> 
+                  {{ selectedMeter.utilityType === 'INTERNET' ? 'Generate Subscription Bill' : 'Enter Reading' }}
+                </h5>
+                <button class="btn btn-sm btn-light rounded-circle shadow-sm" (click)="cancelSelection()">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div class="row align-items-center">
+                <div class="col-md-4 border-end border-primary-subtle">
+                  <h6 class="fw-bold mb-1">{{ selectedMeter.consumerName }}</h6>
+                  <div class="text-muted small mb-2">{{ selectedMeter.meterNumber }}</div>
+                  <span class="badge bg-white text-primary border border-primary-subtle rounded-pill">
+                    <i class="bi {{ getUtilityIcon(selectedMeter.utilityType) }} me-1"></i> {{ selectedMeter.utilityType }}
+                  </span>
+                </div>
+
+                <div class="col-md-8 ps-md-4">
+                  <form [formGroup]="readingForm" (ngSubmit)="submitReading()" class="d-flex gap-3 align-items-end">
+                    
+                    <div class="flex-grow-1" *ngIf="selectedMeter.utilityType !== 'INTERNET'">
+                      <label class="form-label small fw-bold text-primary opacity-75">CURRENT READING (Units)</label>
+                      <input type="number" class="form-control form-control-lg border-0 shadow-sm" 
+                             formControlName="reading" placeholder="0.00">
+                    </div>
+
+                    <div class="flex-grow-1" *ngIf="selectedMeter.utilityType === 'INTERNET'">
+                       <label class="form-label small fw-bold text-primary opacity-75">BILLING TYPE</label>
+                       <div class="form-control form-control-lg border-0 shadow-sm bg-white text-muted d-flex align-items-center">
+                          <i class="bi bi-check-circle-fill text-success me-2"></i> Flat Rate Subscription
+                       </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg px-4 shadow-sm" type="submit" 
+                            [disabled]="isLoading || readingForm.invalid">
+                      {{ isLoading ? 'Processing...' : 'Generate Bill' }}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm rounded-4 h-100-card">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center rounded-top-4 flex-shrink-0">
+              <h6 class="fw-bold mb-0 text-dark">Active Meters</h6>
+              <div class="input-group w-auto">
+                <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control border-0 bg-light" placeholder="Search Meters..." 
+                       [(ngModel)]="meterSearch" (input)="filterMeters()">
+              </div>
+            </div>
+            
+            <div class="table-scroll-area">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-uppercase small text-muted">
+                  <tr>
+                    <th class="ps-4 py-3">Consumer</th>
+                    <th class="py-3">Meter Number</th>
+                    <th class="py-3">Utility</th>
+                    <th class="py-3">Status</th>
+                    <th class="text-end pe-4 py-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let m of filteredMeters" [class]="getRowClass(m)">
+                    <td class="ps-4 fw-medium text-dark">
+                      {{ m.consumerName }}
+                      <div *ngIf="!m.isBillable" class="small text-danger fw-normal mt-1">
+                        <i class="bi bi-clock"></i> Wait {{ m.daysRemaining }} days
+                      </div>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">{{ m.meterNumber }}</span></td>
+                    <td>
+                      <div class="d-flex align-items-center">
+                        <i class="bi {{ getUtilityIcon(m.utilityType) }} me-2"></i>
+                        {{ m.utilityType | titlecase }}
+                      </div>
+                    </td>
+                    <td>
+                      <span *ngIf="m.isBillable" class="badge bg-success-subtle text-success rounded-pill px-3">
+                        Ready to generate Bill
+                      </span>
+                      <span *ngIf="!m.isBillable" class="badge bg-light text-muted border rounded-pill px-3">
+                        Next: {{ m.nextBillDate | date:'mediumDate' }}
+                      </span>
+                    </td>
+                    <td class="text-end pe-4">
+                      <button class="btn btn-sm rounded-pill px-3" 
+                              [class.btn-outline-primary]="m.isBillable"
+                              [class.btn-light]="!m.isBillable"
+                              [class.border]="!m.isBillable"
+                              (click)="selectMeterForBilling(m)"
+                              [disabled]="!m.isBillable">
+                        {{ m.isBillable ? 'Select' : 'Locked' }}
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr *ngIf="filteredMeters.length === 0 && !isLoading">
+                    <td colspan="5" class="text-center py-5 text-muted">
+                      No active meters found.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="activeTab === 'history'" class="h-100-card card border-0 shadow-sm rounded-4">
+          <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center rounded-top-4 flex-shrink-0">
+            <h6 class="fw-bold mb-0 text-dark">Generated Invoices</h6>
+            <div class="input-group w-auto">
+              <span class="input-group-text bg-light border-0"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control border-0 bg-light" placeholder="Search Bill ID..." 
+                     [(ngModel)]="billSearch" (input)="filterBills()">
+            </div>
+          </div>
+
+          <div class="table-scroll-area">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="bg-light text-uppercase small text-muted">
+                <tr>
+                  <th class="ps-4 py-3">Bill ID</th>
+                  <th class="py-3">Consumer</th>
+                  <th class="py-3">Date</th>
+                  <th class="py-3">Amount</th>
+                  <th class="py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let b of filteredBills">
+                  <td class="ps-4 text-primary fw-bold">#{{ b.id | slice:0:8 }}</td>
+                  <td>{{ b.consumerName }}</td>
+                  <td>{{ b.billingDate | date:'mediumDate' }}</td>
+                  <td class="fw-bold">₹{{ b.totalAmount | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="badge rounded-pill px-3" 
+                          [ngClass]="b.status === 'PAID' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'">
+                      {{ b.status }}
+                    </span>
+                  </td>
+                </tr>
+                
+                <tr *ngIf="filteredBills.length === 0 && !isLoading">
+                  <td colspan="5" class="text-center text-muted" style="height: 300px;">
+                     <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                       <i class="bi bi-receipt fs-1 opacity-25 mb-2"></i>
+                       <p class="mb-0">No billing history found.</p>
+                     </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

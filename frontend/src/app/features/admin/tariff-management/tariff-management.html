@@ -1,0 +1,267 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'Tariff Plans'"></app-navbar>
+
+    <div class="container-fluid p-4">
+      
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h5 class="fw-bold mb-1">Manage Tariffs</h5>
+          <p class="text-muted small mb-0">Configure rates for Electricity, Water, Gas, and Internet.</p>
+        </div>
+        <button class="btn btn-primary" (click)="openCreateModal()">
+          <i class="bi bi-plus-lg me-2"></i> Add New Plan
+        </button>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+          <div class="row g-3 align-items-center">
+            
+            <div class="col-md-4">
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control border-start-0 bg-light" 
+                       placeholder="Search plans..." 
+                       [(ngModel)]="searchTerm" (input)="applyFilters()">
+              </div>
+            </div>
+
+            <div class="col-md-5 d-flex justify-content-center">
+              <div class="btn-group bg-light rounded-pill p-1" role="group">
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-medium" 
+                        [class.btn-white]="selectedUtility === 'ALL'"
+                        [class.shadow-sm]="selectedUtility === 'ALL'"
+                        (click)="filterByUtility('ALL')">All</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-medium"
+                        [class.btn-white]="selectedUtility === 'ELECTRICITY'"
+                        [class.text-warning]="selectedUtility === 'ELECTRICITY'"
+                        [class.shadow-sm]="selectedUtility === 'ELECTRICITY'"
+                        (click)="filterByUtility('ELECTRICITY')">Electricity</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-medium"
+                        [class.btn-white]="selectedUtility === 'WATER'"
+                        [class.text-info]="selectedUtility === 'WATER'"
+                        [class.shadow-sm]="selectedUtility === 'WATER'"
+                        (click)="filterByUtility('WATER')">Water</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-medium"
+                        [class.btn-white]="selectedUtility === 'GAS'"
+                        [class.text-danger]="selectedUtility === 'GAS'"
+                        [class.shadow-sm]="selectedUtility === 'GAS'"
+                        (click)="filterByUtility('GAS')">Gas</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 fw-medium"
+                        [class.btn-white]="selectedUtility === 'INTERNET'"
+                        [class.text-primary]="selectedUtility === 'INTERNET'"
+                        [class.shadow-sm]="selectedUtility === 'INTERNET'"
+                        (click)="filterByUtility('INTERNET')">Internet</button>
+              </div>
+            </div>
+
+            <div class="col-md-3 text-end">
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-muted small">Sort By</span>
+                <select class="form-select border-start-0 ps-0" [(ngModel)]="sortBy" (change)="applyFilters()">
+                  <option value="name">Name (A-Z)</option>
+                  <option value="utility">Utility Type</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="ps-4">Plan Name / Category</th>
+                  <th>Utility Type</th>
+                  <th>Billing Type</th>
+                  <th>Rate Structure</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let plan of filteredTariffs">
+                  <td class="ps-4">
+                    <div class="fw-bold text-dark">{{ plan.planName || plan.category }}</div>
+                    <small class="text-muted" *ngIf="plan.description">{{ plan.description }}</small>
+                  </td>
+                  <td>
+                    <span class="badge px-3 py-2 rounded-pill" 
+                          [ngClass]="{
+                            'bg-warning-subtle text-warning': plan.utilityType === 'ELECTRICITY',
+                            'bg-info-subtle text-info': plan.utilityType === 'WATER',
+                            'bg-danger-subtle text-danger': plan.utilityType === 'GAS',
+                            'bg-primary-subtle text-primary': plan.utilityType === 'INTERNET'
+                          }">
+                      {{ plan.utilityType }}
+                    </span>
+                  </td>
+                  <td><small class="text-uppercase fw-bold text-secondary">{{ plan.billingType }}</small></td>
+                  <td class="fw-medium">{{ getRateDisplay(plan) }}</td>
+                  <td class="text-end pe-4">
+                    <button class="btn btn-sm btn-light border me-2" (click)="openEditModal(plan)">
+                      <i class="bi bi-pencil-fill text-muted"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light border" (click)="confirmDelete(plan)">
+                      <i class="bi bi-trash-fill text-danger"></i>
+                    </button>
+                  </td>
+                </tr>
+                
+                <tr *ngIf="filteredTariffs.length === 0 && !isLoading">
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <i class="bi bi-search fs-3 mb-2 d-block opacity-50"></i>
+                    No plans match your search filters.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="tariffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0 pt-4 px-4">
+        <h5 class="modal-title fw-bold">{{ isEditMode ? 'Edit Plan' : 'Create New Plan' }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form (ngSubmit)="saveTariff()">
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Utility Type</label>
+              <select class="form-select" [(ngModel)]="currentTariff.utilityType" 
+                      name="utilityType" (change)="onUtilityTypeChange()">
+                <option value="ELECTRICITY">Electricity</option>
+                <option value="WATER">Water</option>
+                <option value="GAS">Gas</option>
+                <option value="INTERNET">Internet</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Category</label>
+              <select class="form-select" [(ngModel)]="currentTariff.category" name="category">
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+                <option value="Industrial">Industrial</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-medium">Plan Name</label>
+            <input type="text" class="form-control" [(ngModel)]="currentTariff.planName" name="planName" 
+                   placeholder="e.g. Residential Standard">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-medium">Description</label>
+            <input type="text" class="form-control" [(ngModel)]="currentTariff.description" name="description" 
+                   placeholder="Short description of the plan">
+          </div>
+
+          <hr class="my-4 opacity-25">
+
+          <div *ngIf="currentTariff.billingType === 'METERED'">
+             <div class="d-flex justify-content-between align-items-center mb-2">
+               <label class="form-label fw-bold text-primary mb-0">Usage Tiers</label>
+               <button type="button" class="btn btn-sm btn-outline-primary" (click)="addSlab()">
+                 <i class="bi bi-plus-lg"></i> Add Tier
+               </button>
+             </div>
+             
+             <div class="table-responsive border rounded-3 bg-light">
+               <table class="table table-borderless mb-0">
+                 <thead class="small text-muted text-uppercase">
+                   <tr>
+                     <th class="ps-3" style="width: 30%;">Min Units</th>
+                     <th style="width: 30%;">Max Units</th>
+                     <th style="width: 30%;">Rate (₹)</th>
+                     <th class="text-end pe-3" style="width: 10%;"></th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   <tr *ngFor="let slab of currentTariff.slabs; let i = index">
+                     <td class="ps-3">
+                       <input type="number" class="form-control form-control-sm" 
+                              [(ngModel)]="slab.minUnits" [name]="'min'+i" placeholder="0">
+                     </td>
+                     <td>
+                       <input type="number" class="form-control form-control-sm" 
+                              [(ngModel)]="slab.maxUnits" [name]="'max'+i" placeholder="9999">
+                     </td>
+                     <td>
+                       <div class="input-group input-group-sm">
+                         <span class="input-group-text bg-white border-end-0">₹</span>
+                         <input type="number" class="form-control border-start-0 ps-0" 
+                                [(ngModel)]="slab.rate" [name]="'rate'+i">
+                       </div>
+                     </td>
+                     <td class="text-end pe-3">
+                       <button type="button" class="btn btn-sm text-danger hover-bg-light rounded-circle" 
+                               (click)="removeSlab(i)" *ngIf="currentTariff.slabs.length > 1">
+                         <i class="bi bi-trash"></i>
+                       </button>
+                     </td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
+          </div>
+
+          <div *ngIf="currentTariff.billingType !== 'METERED'">
+            <label class="form-label fw-bold text-success mb-2">Fixed Pricing</label>
+            <div class="input-group">
+              <span class="input-group-text">₹</span>
+              <input type="number" class="form-control" [(ngModel)]="currentTariff.baseRate" name="baseRate" 
+                     placeholder="Enter Amount">
+            </div>
+          </div>
+
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn btn-primary py-2" [disabled]="isSaving">
+              {{ isSaving ? 'Saving...' : (isEditMode ? 'Update Plan' : 'Create Plan') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+    <div class="modal-content border-0 shadow rounded-4">
+      <div class="modal-body p-4 text-center">
+        <div class="mb-3">
+            <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" 
+                 style="width: 60px; height: 60px;">
+              <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+            </div>
+        </div>
+        
+        <h5 class="fw-bold mb-2">Delete Tariff Plan?</h5>
+        <p class="text-muted mb-4 small">
+          Are you sure you want to delete <strong class="text-dark">{{ tariffToDelete?.planName || tariffToDelete?.category }}</strong>? 
+          This action cannot be undone.
+        </p>
+        
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-light w-50 py-2 fw-medium" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger w-50 py-2 fw-medium" (click)="deleteTariff()">Delete Plan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

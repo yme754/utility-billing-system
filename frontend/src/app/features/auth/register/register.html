@@ -1,0 +1,118 @@
+<div class="container d-flex justify-content-center align-items-center min-vh-100 bg-light py-5">
+  <div class="card shadow-lg p-4 border-0 rounded-4" style="max-width: 550px; width: 100%;">
+    
+    <div class="text-center mb-4">
+      <div class="text-primary rounded-circle d-inline-flex p-3 mb-3">
+        <i class="bi bi-person-plus-fill fs-2"></i>
+      </div>
+      <h3 class="fw-bold">Create an Account</h3>
+      <p class="text-muted small">Join Utilix to manage your bills smartly</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="alert alert-danger d-flex align-items-center rounded-3 p-2 small mb-3">
+      <i class="bi bi-exclamation-circle-fill me-2"></i>
+      <div>{{ errorMessage }}</div>
+    </div>
+    
+    <div *ngIf="successMessage" class="alert alert-success d-flex align-items-center rounded-3 p-2 small mb-3">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <div>{{ successMessage }}</div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
+      
+      <div class="row g-3">
+        <div class="col-md-6 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">First Name</label>
+          <input type="text" class="form-control bg-light border-0" [(ngModel)]="user.firstName" name="firstName" required #fname="ngModel" [class.is-invalid]="fname.invalid && fname.touched">
+        </div>
+        <div class="col-md-6 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">Last Name</label>
+          <input type="text" class="form-control bg-light border-0" [(ngModel)]="user.lastName" name="lastName" required #lname="ngModel" [class.is-invalid]="lname.invalid && lname.touched">
+        </div>
+
+        <div class="col-12 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">Address</label>
+          <input type="text" class="form-control bg-light border-0" [(ngModel)]="user.address" name="address" required #address="ngModel" [class.is-invalid]="address.invalid && address.touched">
+        </div>
+
+        <div class="col-12 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">Phone Number</label>
+          <input type="tel" class="form-control bg-light border-0" 
+                 [(ngModel)]="user.phoneNumber" name="phoneNumber" 
+                 required pattern="^[0-9]{10}$" #phone="ngModel"
+                 placeholder="e.g. 9876543210"
+                 [class.is-invalid]="(phone.invalid && phone.touched) || fieldErrors.phone">
+          
+          <div *ngIf="phone.invalid && phone.touched" class="invalid-feedback">
+             Enter a valid 10-digit number.
+          </div>
+          <div *ngIf="fieldErrors.phone" class="text-danger small mt-1 fw-bold">
+            <i class="bi bi-exclamation-circle-fill me-1"></i> {{ fieldErrors.phone }}
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">Username</label>
+          <input type="text" class="form-control bg-light border-0" 
+                 [(ngModel)]="user.username" name="username" 
+                 placeholder="Choose a username" 
+                 required minlength="3" #username="ngModel"
+                 [class.is-invalid]="(username.invalid && username.touched) || fieldErrors.username">
+          
+          <div *ngIf="username.invalid && username.touched" class="invalid-feedback">
+            Min 3 characters.
+          </div>
+          <div *ngIf="fieldErrors.username" class="text-danger small mt-1 fw-bold">
+            <i class="bi bi-exclamation-circle-fill me-1"></i> {{ fieldErrors.username }}
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-2">
+          <label class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
+          <input type="email" class="form-control bg-light border-0" 
+                 [(ngModel)]="user.email" name="email" 
+                 placeholder="name@example.com" 
+                 required email #email="ngModel"
+                 [class.is-invalid]="(email.invalid && email.touched) || fieldErrors.email">
+          
+          <div *ngIf="email.invalid && email.touched" class="invalid-feedback">
+            Enter valid email.
+          </div>
+          <div *ngIf="fieldErrors.email" class="text-danger small mt-1 fw-bold">
+            <i class="bi bi-exclamation-circle-fill me-1"></i> {{ fieldErrors.email }}
+          </div>
+        </div>
+
+        <div class="col-12 mb-4">
+          <label class="form-label small fw-bold text-muted text-uppercase">Password</label>
+          <input type="password" class="form-control bg-light border-0" 
+                 [(ngModel)]="user.password" name="password" 
+                 placeholder="Min 6 characters" 
+                 required minlength="6" #password="ngModel"
+                 [class.is-invalid]="password.invalid && password.touched">
+          <div *ngIf="password.invalid && password.touched" class="invalid-feedback">
+            Password must be at least 6 characters.
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm mb-3" 
+              [disabled]="registerForm.invalid || isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+        {{ isLoading ? 'Creating Account...' : 'Sign Up' }}
+      </button>
+
+      <div class="text-center mt-3 pt-3 border-top">
+        <p class="small text-muted mb-2">Already have an account?</p>
+        <a routerLink="/login" class="text-decoration-none fw-bold">Sign In Here</a>
+        
+        <div class="mt-3">
+          <a routerLink="/" class="text-muted small text-decoration-none hover-link">
+            <i class="bi bi-arrow-left me-1"></i> Back to Home
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

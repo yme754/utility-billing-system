@@ -1,0 +1,71 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-3 sticky-top">
+  <div class="container-fluid p-0">
+    
+    <h4 class="fw-bold mb-0 text-dark">{{ pageTitle }}</h4>
+
+    <div class="d-flex align-items-center gap-4">
+      
+      <div class="d-none d-md-block text-end">
+        <small class="text-muted d-block" style="font-size: 0.75rem;">Today</small>
+        <span class="fw-bold small">
+          {{ currentDate | date:'fullDate' }}
+        </span> 
+      </div>
+
+      <div class="dropdown">
+        <a class="text-dark position-relative cursor-pointer" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-4"></i>
+          
+          <span *ngIf="unreadCount > 0" 
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
+            {{ unreadCount }}
+          </span>
+        </a>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-0 mt-3" style="width: 320px;">
+          
+          <li class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0">Notifications</h6>
+            <span *ngIf="unreadCount > 0" class="badge bg-primary-subtle text-primary rounded-pill">
+              {{ unreadCount }} New
+            </span>
+          </li>
+
+          <div style="max-height: 300px; overflow-y: auto;">
+            
+            <li *ngFor="let req of notifications">
+              <a routerLink="/admin/approvals" 
+                 (click)="onNotificationClick(req.id)"
+                 class="dropdown-item p-3 border-bottom d-flex align-items-start gap-3 bg-white"
+                 style="cursor: pointer;">
+                
+                <div class="bg-warning-subtle text-warning rounded-circle p-2 mt-1">
+                  <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div>
+                  <p class="mb-1 small fw-bold text-dark">Connection Request</p>
+                  <p class="mb-1 small text-muted text-wrap">
+                    {{ req.consumerName }} requested a new {{ req.utilityType }} connection.
+                  </p>
+                  <small class="text-primary fw-bold" style="font-size: 0.7rem;">
+                    Tap to Approve <i class="bi bi-arrow-right ms-1"></i>
+                  </small>
+                </div>
+              </a>
+            </li>
+            
+            <li *ngIf="notifications.length === 0" class="p-5 text-center text-muted">
+              <div class="mb-3 text-secondary opacity-50">
+                 <i class="bi bi-bell-slash" style="font-size: 2.5rem;"></i>
+              </div>
+              <p class="mb-0 fw-medium">All caught up!</p>
+              <small class="text-secondary">No new notifications.</small>
+            </li>
+
+          </div>
+          </ul>
+      </div>
+
+    </div>
+  </div>
+</nav>

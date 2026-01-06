@@ -1,0 +1,117 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100">
+    <app-navbar [pageTitle]="'Connection Approvals'"></app-navbar>
+
+    <div class="container-fluid p-4">
+      
+      <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 fw-bold text-primary">Pending Requests</h5>
+          <span class="badge bg-warning text-dark">{{ requests.length }} Pending</span>
+        </div>
+        
+        <div class="card-body p-0">
+          
+          <div *ngIf="isLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+          </div>
+
+          <div *ngIf="!isLoading && requests.length === 0" class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            No pending requests found.
+          </div>
+
+          <div class="table-responsive" *ngIf="!isLoading && requests.length > 0">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="bg-light">
+                <tr>
+                  <th class="ps-4">Consumer</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Request Date</th>
+                  <th class="text-end pe-4">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let req of requests">
+                  <td class="ps-4">
+                    <div class="fw-bold text-dark">{{ req.consumerName || 'Unknown User' }}</div>
+                    <div class="small text-muted">ID: {{ req.consumerId }}</div>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
+                      {{ req.utilityType }}
+                    </span>
+                  </td>
+                  <td>{{ req.tariffCategory }}</td>
+                  <td>{{ req.connectionDate | date:'mediumDate' }}</td> <td class="text-end pe-4">
+                    <button class="btn btn-sm btn-success px-3 rounded-pill" (click)="openApproveModal(req)">
+                      Approve
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Approve Connection</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3">
+          Assign a unique meter number to activate the 
+          <span class="fw-bold text-dark">{{ selectedRequest?.utilityType }}</span> connection for 
+          <span class="fw-bold text-dark">{{ selectedRequest?.consumerName }}</span>.
+        </p>
+        
+        <label class="form-label fw-medium">Assign Meter Number</label>
+        <div class="input-group mb-3">
+          <span class="input-group-text bg-light"><i class="bi bi-speedometer"></i></span>
+          <input type="text" class="form-control" [(ngModel)]="meterNumber" placeholder="e.g. ELEC-2026-001">
+        </div>
+
+        <div class="d-grid">
+          <button class="btn btn-success" (click)="confirmApproval()" [disabled]="!meterNumber || isProcessing">
+            {{ isProcessing ? 'Activating...' : 'Confirm & Activate' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="success-overlay" *ngIf="showSuccessModal">
+  <div class="success-card shadow-lg">
+    
+    <div class="status-box bg-success-subtle">
+      <div class="icon-circle mb-3">
+        <i class="bi bi-check-lg text-success"></i>
+      </div>
+      <h4 class="fw-bold text-success mb-2">Connection Activated!</h4>
+      <p class="text-muted small mb-0">
+        The request has been approved and the meter has been assigned successfully.
+      </p>
+    </div>
+
+    <div class="redirect-section mt-4">
+      <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+      <p class="text-secondary small fw-medium">
+        Refreshing pending list...
+      </p>
+    </div>
+
+  </div>
+</div>

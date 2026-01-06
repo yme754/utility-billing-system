@@ -1,0 +1,36 @@
+:host {
+    display: block;
+    width: 100%;
+}
+tbody tr {
+    transition: background-color 0.2s ease;
+}
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1040;
+}
+.modal {
+    z-index: 1050;
+}
+select option[value=""][disabled] {
+    color: #6c757d;
+}
+.badge.bg-success { background-color: #d1fae5 !important; color: #065f46 !important; }
+.badge.bg-danger { background-color: #fee2e2 !important; color: #991b1b !important; }
+.badge.bg-warning { background-color: #fef3c7 !important; color: #92400e !important; }
+.custom-select-dark {
+    color: #1f2937 !important;
+    font-weight: 500;
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+}
+.form-select-sm {
+    height: 35px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.btn-white {
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  color: #333;
+}

@@ -1,0 +1,210 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'My Bills'"></app-navbar>
+
+    <div class="container-fluid p-4">
+
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+        <div>
+          <h4 class="fw-bold text-dark mb-1">Utility Bills</h4>
+          <p class="text-muted small mb-0">View, track, and pay your monthly bills.</p>
+        </div>
+
+        <select class="form-select border-0 shadow-sm fw-medium"
+                [(ngModel)]="filterStatus"
+                (change)="applyFilters()"
+                style="width: 140px;">
+          <option value="ALL">All Status</option>
+          <option value="UNPAID">Unpaid</option>
+          <option value="PAID">Paid</option>
+        </select>
+      </div>
+
+      <div class="d-flex justify-content-center mb-5">
+        <div class="filter-container">
+          <button class="filter-pill"
+                  [class.active]="selectedUtility === 'ALL'"
+                  [class.text-dark]="selectedUtility === 'ALL'"
+                  (click)="setUtilityFilter('ALL')">All</button>
+
+          <button class="filter-pill"
+                  [class.active]="selectedUtility === 'ELECTRICITY'"
+                  [class.text-warning]="selectedUtility === 'ELECTRICITY'"
+                  (click)="setUtilityFilter('ELECTRICITY')">Electricity</button>
+
+          <button class="filter-pill"
+                  [class.active]="selectedUtility === 'WATER'"
+                  [class.text-info]="selectedUtility === 'WATER'"
+                  (click)="setUtilityFilter('WATER')">Water</button>
+
+          <button class="filter-pill"
+                  [class.active]="selectedUtility === 'GAS'"
+                  [class.text-danger]="selectedUtility === 'GAS'"
+                  (click)="setUtilityFilter('GAS')">Gas</button>
+
+          <button class="filter-pill"
+                  [class.active]="selectedUtility === 'INTERNET'"
+                  [class.text-primary]="selectedUtility === 'INTERNET'"
+                  (click)="setUtilityFilter('INTERNET')">Internet</button>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Fetching your bills...</p>
+      </div>
+
+      <div *ngIf="!isLoading && filteredBills.length > 0" class="row g-4">
+        <div class="col-lg-6 col-xl-4" *ngFor="let bill of filteredBills">
+          <div class="card bill-card border-0 shadow-sm h-100 rounded-4 bg-white">
+            <div class="card-body p-4">
+
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi utility-icon me-3 fs-3"
+                    [ngClass]="{
+                      'bi-lightning-charge-fill text-warning': bill.utilityType === 'ELECTRICITY',
+                      'bi-droplet-fill text-info': bill.utilityType === 'WATER',
+                      'bi-fire text-danger': bill.utilityType === 'GAS',
+                      'bi-wifi text-primary': bill.utilityType === 'INTERNET',
+                      'bi-house-fill text-secondary': !bill.utilityType
+                    }">
+                  </i>
+                  <div>
+                    <h6 class="fw-bold text-uppercase mb-0 small text-primary">
+                      {{ bill.utilityType || 'SERVICE' }}
+                    </h6>
+                    <span class="text-muted small">#{{ bill.id | slice:0:8 }}</span>
+                  </div>
+                </div>
+                <h3 class="fw-bold mb-0 text-dark">
+                  ₹{{ bill.totalAmount | number:'1.0-0' }}
+                </h3>
+              </div>
+
+              <hr class="opacity-10 my-4">
+
+              <div class="row g-2 mb-4">
+                <div class="col-6">
+                  <p class="text-muted small fw-bold mb-1">Bill Date</p>
+                  <p class="fw-medium mb-0">{{ bill.billingDate | date:'mediumDate' }}</p>
+                </div>
+                <div class="col-6">
+                  <p class="text-muted small fw-bold mb-1">Consumption</p>
+                  <p class="fw-medium mb-0">{{ bill.unitsConsumed }} Units</p>
+                </div>
+              </div>
+
+              <div *ngIf="bill.status === 'PAID'">
+                <div class="text-success fw-bold mb-3 d-flex align-items-center">
+                  <i class="bi bi-check-circle-fill me-2 fs-5"></i>Paid Successfully
+                </div>
+                <button class="btn btn-outline-secondary w-100 py-3 rounded-3"
+                        (click)="downloadReceipt(bill)">
+                  Download Receipt
+                </button>
+              </div>
+
+              <div *ngIf="bill.status === 'UNPAID'">
+                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow-sm"
+                        (click)="openPaymentModal(bill)">
+                  Pay Now
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!isLoading && filteredBills.length === 0" class="text-center py-5">
+        <h5 class="text-muted">No bills found</h5>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0 rounded-4">
+      
+      <div *ngIf="!paymentSuccessData">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Make Payment</h5>
+          <button type="button" class="btn-close" (click)="closeModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="text-center mb-4">
+            <p class="text-muted small mb-1">Total Payable Amount</p>
+            <h2 class="fw-bold text-primary">₹{{ selectedBill?.totalAmount | number:'1.2-2' }}</h2>
+          </div>
+
+          <p class="fw-medium mb-3">Select Payment Method</p>
+          <div class="d-grid gap-3">
+            <div class="payment-option p-3 rounded d-flex align-items-center" 
+                 [class.selected]="paymentMode === 'UPI'" (click)="selectMode('UPI')">
+              <i class="bi bi-qr-code-scan fs-4 text-success me-3"></i>
+              <div>
+                <h6 class="mb-0 fw-bold">UPI / QR Code</h6>
+                <small class="text-muted">GPay, PhonePe, Paytm</small>
+              </div>
+              <div class="ms-auto" *ngIf="paymentMode === 'UPI'">
+                <i class="bi bi-check-circle-fill text-primary"></i>
+              </div>
+            </div>
+
+            <div class="payment-option p-3 rounded d-flex align-items-center" 
+                 [class.selected]="paymentMode === 'CARD'" (click)="selectMode('CARD')">
+              <i class="bi bi-credit-card fs-4 text-primary me-3"></i>
+              <div>
+                <h6 class="mb-0 fw-bold">Credit / Debit Card</h6>
+                <small class="text-muted">Visa, Mastercard</small>
+              </div>
+              <div class="ms-auto" *ngIf="paymentMode === 'CARD'">
+                <i class="bi bi-check-circle-fill text-primary"></i>
+              </div>
+            </div>
+
+            <div class="payment-option p-3 rounded d-flex align-items-center" 
+                 [class.selected]="paymentMode === 'NET_BANKING'" (click)="selectMode('NET_BANKING')">
+              <i class="bi bi-bank fs-4 text-warning me-3"></i>
+              <div>
+                <h6 class="mb-0 fw-bold">Net Banking</h6>
+                <small class="text-muted">All Major Banks</small>
+              </div>
+              <div class="ms-auto" *ngIf="paymentMode === 'NET_BANKING'">
+                <i class="bi bi-check-circle-fill text-primary"></i>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-100 py-3 mt-4 fw-bold rounded-3" 
+                  [disabled]="isProcessingPayment" (click)="processPayment()">
+            <span *ngIf="isProcessingPayment" class="spinner-border spinner-border-sm me-2"></span>
+            {{ isProcessingPayment ? 'Processing...' : 'Pay Securely' }}
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="paymentSuccessData" class="text-center p-5">
+        <div class="mb-3">
+          <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+               style="width: 80px; height: 80px;">
+            <i class="bi bi-check-lg fs-1"></i>
+          </div>
+        </div>
+        <h3 class="fw-bold text-success mb-2">Payment Successful!</h3>
+        <p class="text-muted mb-4">Transaction ID: {{ paymentSuccessData.transactionId }}</p>
+        
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" (click)="downloadReceipt(selectedBill)">Download Receipt</button>
+          <button class="btn btn-light" (click)="closeModal()">Close</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

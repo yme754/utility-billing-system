@@ -1,0 +1,119 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'Financial Overview'"></app-navbar>
+
+    <div class="container-fluid p-4">
+      
+      <div class="row g-4 mb-4">
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 stat-card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-success-subtle text-success rounded-circle p-3 me-3">
+                  <i class="bi bi-wallet2 fs-3"></i>
+                </div>
+                <div>
+                  <p class="text-muted text-uppercase fw-bold small mb-1">Total Revenue</p>
+                  <h3 class="fw-bold text-dark mb-0">₹{{ totalRevenue | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 stat-card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary-subtle text-primary rounded-circle p-3 me-3">
+                  <i class="bi bi-calendar-check fs-3"></i>
+                </div>
+                <div>
+                  <p class="text-muted text-uppercase fw-bold small mb-1">Today's Collection</p>
+                  <h3 class="fw-bold text-dark mb-0">₹{{ todayRevenue | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 stat-card h-100">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-danger-subtle text-danger rounded-circle p-3 me-3">
+                  <i class="bi bi-exclamation-octagon fs-3"></i>
+                </div>
+                <div>
+                  <p class="text-muted text-uppercase fw-bold small mb-1">Outstanding Dues</p>
+                  <h3 class="fw-bold text-dark mb-0">₹{{ outstandingDues | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-lg-8">
+           <div class="card border-0 shadow-sm rounded-4 h-100">
+             <div class="card-header bg-white py-3">
+               <h6 class="fw-bold mb-0">Revenue Trend</h6>
+             </div>
+             <div class="card-body">
+               <canvas baseChart [data]="lineChartData" [options]="lineChartOptions" [type]="'line'"></canvas>
+             </div>
+           </div>
+        </div>
+        <div class="col-lg-4">
+           <div class="card border-0 shadow-sm rounded-4 h-100">
+             <div class="card-header bg-white py-3">
+               <h6 class="fw-bold mb-0">Payment Modes</h6>
+             </div>
+             <div class="card-body">
+               <canvas baseChart [data]="pieChartData" [options]="pieChartOptions" [type]="'pie'"></canvas>
+             </div>
+           </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+          <h6 class="fw-bold mb-0">Recent Transactions</h6>
+          
+          <button class="btn btn-sm btn-outline-secondary" routerLink="/accounts/transactions">
+            View All
+          </button>
+          
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-muted small text-uppercase">
+              <tr>
+                <th class="ps-4">Transaction ID</th>
+                <th>Bill ID</th>
+                <th>Mode</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of recentTransactions">
+                <td class="ps-4 fw-medium text-dark">{{ t.transactionId }}</td>
+                <td class="small">{{ t.billId }}</td>
+                <td><span class="badge bg-light text-dark border">{{ t.paymentMode }}</span></td>
+                <td>{{ t.paymentDate | date:'short' }}</td>
+                <td class="fw-bold text-success">₹{{ t.amount | number:'1.2-2' }}</td>
+                <td><span class="badge bg-success-subtle text-success">SUCCESS</span></td>
+              </tr>
+              <tr *ngIf="recentTransactions.length === 0">
+                 <td colspan="6" class="text-center py-4 text-muted">No recent transactions.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

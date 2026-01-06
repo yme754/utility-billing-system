@@ -1,0 +1,201 @@
+<div class="container fixed-top">
+  <nav class="navbar navbar-expand-lg navbar-light navbar-floating">
+    <div class="container-fluid">
+      
+      <a class="navbar-brand fw-bold fs-3 d-flex align-items-center" href="#">
+        <i class="bi bi-lightning-charge-fill text-primary me-2"></i>
+        <span style="letter-spacing: -1px; font-weight: 800;">Utilix</span>
+      </a>
+      
+      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item">
+            <a class="nav-link fw-medium px-3 text-dark pointer-cursor" (click)="scrollToSection('tariffs')">Tariff Plans</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link fw-medium px-3 text-dark pointer-cursor" (click)="scrollToSection('stats')">Impact</a>
+          </li>
+        </ul>
+        
+        <div class="d-flex align-items-center gap-3">
+          <div class="dropdown">
+            <button class="contact-btn" type="button" id="contactDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-telephone"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end contact-dropdown-menu" aria-labelledby="contactDropdown">
+              <li><div class="contact-header">Get Support</div></li>
+              <li>
+                <a class="contact-item" href="tel:9989774310">
+                  <i class="bi bi-headset fs-4 text-primary me-3"></i>
+                  <div>
+                    <div class="small text-muted">Support</div>
+                    <div class="fw-bold">9989774310</div>
+                  </div>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <a routerLink="/login" class="btn btn-primary bg-opacity-25 text-warning-emphasis fw-bold px-4 rounded-pill" 
+             style="background-color: #fff8e1; color: #b45309; border: none;">
+            Login
+          </a>
+          <a routerLink="/register" class="btn btn-primary bg-opacity-25 text-warning-emphasis px-4 rounded-pill fw-bold">Sign Up</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<section class="hero-section d-flex align-items-center">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-6 mb-5 mb-lg-0">
+        <h1 class="display-3 fw-bold mb-4 text-dark" style="line-height: 1.2;">
+          Simplify Your <br>
+          <span class="text-primary">Utility Payments</span> Today.
+        </h1>
+        <p class="lead text-muted mb-4 pe-lg-5" style="font-size: 1.1rem;">
+          India's trusted platform for electricity, water, gas, and internet billing. 
+          Monitor usage, pay bills, and manage connections—all in one place.
+        </p>
+        <div class="d-flex gap-3">
+          <a routerLink="/register" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+            Get Started Now <i class="bi bi-arrow-right ms-2"></i>
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-6 text-center">
+        <img src="https://img.freepik.com/free-vector/dashboard-concept-illustration_114360-4416.jpg?t=st=1735912000~exp=1735915600~hmac=8b2c8a0a8e3d8f8a8b8c8a8c8a8c8a8c8a8c8a8c8a8c8a8c8a8c8a8c8a8c8a8c" 
+             alt="Utilix Dashboard" class="img-fluid floating-anim rounded-4 shadow-lg" style="max-width: 90%;">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tariffs" class="py-5 bg-light">
+  <div class="container py-5">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Transparent Tariff Plans</h2>
+      <p class="text-muted">Know exactly what you pay for. Switch tabs below.</p>
+    </div>
+
+    <div class="d-flex justify-content-center mb-5 flex-wrap gap-2">
+      <button *ngFor="let type of ['ELECTRICITY', 'WATER', 'GAS', 'INTERNET']"
+              class="btn rounded-pill px-4 py-2 fw-medium transition-btn"
+              [ngClass]="activeTab === type ? 'btn btn-outline-primary shadow' : 'btn-white bg-white text-muted border'"
+              (click)="filterTariffs(type)">
+        <i class="bi me-2" 
+           [ngClass]="{
+             'bi-lightning-charge text-warning': type === 'ELECTRICITY', 
+             'bi-droplet text-info': type === 'WATER',
+             'bi-fire text-danger': type === 'GAS',
+             'bi-wifi text-primary': type === 'INTERNET'
+           }"></i>
+        {{ type }}
+      </button>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+      <div class="col-md-6 col-lg-4" *ngFor="let plan of filteredTariffs">
+        <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-card">
+          <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+            <span class="badge bg-primary bg-opacity-10 text-primary mb-2">{{ plan.category }}</span>
+            <h4 class="fw-bold mb-1">{{ plan.planName || plan.category + ' Plan' }}</h4>
+            <p class="text-muted small">{{ plan.billingType }}</p>
+          </div>
+          <div class="card-body px-4">
+            <div *ngIf="plan.slabs && plan.slabs.length > 0">
+              <div class="table-responsive">
+                <table class="table table-sm text-small mb-0">
+                  <thead class="text-muted"><tr><th>Units</th><th class="text-end">Rate (₹)</th></tr></thead>
+                  <tbody>
+                    <tr *ngFor="let slab of plan.slabs">
+                      <td>{{ slab.minUnits }} - {{ slab.maxUnits > 90000 ? 'Above' : slab.maxUnits }}</td>
+                      <td class="text-end fw-bold">₹ {{ slab.rate }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div *ngIf="plan.baseRate" class="text-center py-4">
+              <h1 class="display-4 fw-bold text-primary mb-0">₹ {{ plan.baseRate }}</h1>
+              <p class="text-muted small">{{ plan.utilityType === 'INTERNET' ? 'per month' : 'per unit' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="filteredTariffs.length === 0" class="col-12 text-center py-5">
+         <div class="spinner-border text-primary" role="status"></div>
+         <p class="mt-2 text-muted">Loading Plans...</p>
+         <small class="d-block text-muted mt-2">(If this persists, check if Backend is running)</small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="stats" class="py-5 bg-white">
+  <div class="container py-5">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Numbers That Reflect Our Success</h2>
+    </div>
+    <div class="row g-4 text-center justify-content-center">
+      <div class="col-6 col-md-3">
+        <div class="p-4 border rounded-4 bg-light h-100">
+          <i class="bi bi-people fs-1 text-primary mb-3 d-block"></i>
+          <h2 class="fw-bold mb-1">{{ totalConsumers }}</h2>
+          <p class="text-muted small mb-0">Registered Consumers</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="p-4 border rounded-4 bg-light h-100">
+          <i class="bi bi-receipt fs-1 text-success mb-3 d-block"></i>
+          <h2 class="fw-bold mb-1">{{ billsProcessed }}</h2>
+          <p class="text-muted small mb-0">Bills Processed</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="bg-dark text-white py-5 mt-auto">
+  <div class="container">
+    <div class="row g-5">
+      <div class="col-lg-4">
+        <h3 class="fw-bold mb-3 d-flex align-items-center">
+          <i class="bi bi-lightning-charge-fill text-primary me-2"></i> Utilix
+        </h3>
+        <p class="text-white-50">India's most advanced utility billing and management platform.</p>
+        <div class="d-flex gap-3 mt-4">
+          <a href="#" class="text-white"><i class="bi bi-facebook fs-5"></i></a>
+          <a href="#" class="text-white"><i class="bi bi-linkedin fs-5"></i></a>
+        </div>
+      </div>
+      <div class="col-6 col-lg-2">
+        <h6 class="fw-bold mb-3 text-uppercase small">Company</h6>
+        <ul class="list-unstyled text-white-50 small">
+          <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">About Us</a></li>
+          <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none">Contact</a></li>
+        </ul>
+      </div>
+      <div class="col-lg-4">
+        <h6 class="fw-bold mb-3 text-uppercase small">Get Support</h6>
+        <p class="text-white-50 small mb-2">Have questions? Call us directly.</p>
+        <h4 class="text-white fw-bold">9989774310</h4>
+        <p class="text-white-50 small mt-3">Email: support@utilix.in</p>
+      </div>
+    </div>
+    <div class="border-top border-secondary mt-5 pt-4 text-center text-white-50 small">
+      &copy; 2026 Utilix Systems Pvt Ltd. Hyderabad.
+    </div>
+  </div>
+</footer>
+
+<button class="scroll-top-btn" [class.show]="showScrollBtn" (click)="scrollToTop()">
+  <i class="bi bi-arrow-up"></i>
+</button>

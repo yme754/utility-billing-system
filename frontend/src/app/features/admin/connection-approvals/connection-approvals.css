@@ -1,0 +1,74 @@
+.card-header {
+  border-bottom: 1px solid #f0f0f0;
+}
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.card-header {
+  border-bottom: 1px solid #f0f0f0;
+}
+.table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6c757d;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;  
+  background-color: rgba(0, 0, 0, 0.4); 
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 1060;   
+  display: flex;
+  justify-content: center;
+  align-items: center;  
+  animation: fadeIn 0.3s ease-in-out;
+}
+.success-card {
+  background-color: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);  
+  animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.status-box {
+  border-radius: 15px;
+  padding: 30px 20px;
+  background-color: #d1e7dd;
+}
+.icon-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #198754;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 30px;
+  background-color: white;
+  margin: 0 auto;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleUp {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

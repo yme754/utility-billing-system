@@ -1,0 +1,227 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'My Connections'"></app-navbar>
+
+    <div class="container-fluid p-4">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="fw-bold mb-1">Utility Meters</h4>
+          <p class="text-muted small">
+            Manage your electricity, water, gas, and internet connections.
+          </p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newConnectionModal">
+          <i class="bi bi-plus-lg me-2"></i> New Connection
+        </button>
+      </div>
+
+      <div class="d-flex justify-content-center mb-5">
+        <div class="filter-container">
+          <button class="filter-pill"
+                  [class.active]="selectedStatus === 'ALL'"
+                  [class.text-dark]="selectedStatus === 'ALL'"
+                  (click)="setStatusFilter('ALL')">
+            All
+          </button>
+          <button class="filter-pill"
+                  [class.active]="selectedStatus === 'ACTIVE'"
+                  [class.text-success]="selectedStatus === 'ACTIVE'"
+                  (click)="setStatusFilter('ACTIVE')">
+            Active
+          </button>
+          <button class="filter-pill"
+                  [class.active]="selectedStatus === 'PENDING'"
+                  [class.text-warning]="selectedStatus === 'PENDING'"
+                  (click)="setStatusFilter('PENDING')">
+            Pending
+          </button>
+          <button class="filter-pill"
+                  [class.active]="selectedStatus === 'INACTIVE'"
+                  [class.text-danger]="selectedStatus === 'INACTIVE'"
+                  (click)="setStatusFilter('INACTIVE')">
+            Inactive
+          </button>
+        </div>
+      </div>
+
+      <div *ngIf="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+      </div>
+
+      <div *ngIf="!isLoading" class="row g-4">
+        <div class="col-md-6 col-lg-4" *ngFor="let conn of filteredConnections">
+          <div class="p-4 h-100 bg-white shadow-sm rounded-4 position-relative">
+            <span class="position-absolute top-0 end-0 m-3 badge rounded-pill"
+              [ngClass]="{
+                'bg-success': conn.status === 'ACTIVE',
+                'bg-warning text-dark': conn.status === 'PENDING',
+                'bg-danger': conn.status === 'INACTIVE'
+              }">
+              {{ conn.status }}
+            </span>
+            <div class="mb-3">
+              <i class="bi utility-icon"
+                [ngClass]="{
+                  'bi-lightning-charge-fill text-warning': conn.utilityType === 'ELECTRICITY',
+                  'bi-droplet-fill text-info': conn.utilityType === 'WATER',
+                  'bi-fire text-danger': conn.utilityType === 'GAS',
+                  'bi-wifi text-primary': conn.utilityType === 'INTERNET'
+                }">
+              </i>
+            </div>
+            <h5 class="fw-bold mb-1">{{ conn.utilityType }}</h5>
+            <p class="text-muted small mb-3">{{ conn.tariffCategory }}</p>
+            <div class="border-top pt-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted small">Meter Number</span>
+                <span class="fw-medium font-monospace">
+                  {{ conn.meterNumber || 'PENDING' }}
+                </span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-muted small">Date</span>
+                <span class="fw-medium">
+                  {{ conn.connectionDate | date:'mediumDate' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="filteredConnections.length === 0" class="col-12 text-center py-5">
+          <h5 class="text-muted">No connections found</h5>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="newConnectionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg"> <div class="modal-content border-0 shadow-lg rounded-4">
+      
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Apply for Connection</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body p-4">
+        
+        <form #connectionForm="ngForm" (ngSubmit)="onRequestSubmit()">
+          
+          <div class="row g-4">
+            
+            <div class="col-md-5 border-end">
+              <div class="mb-4">
+                <label class="form-label fw-bold small text-uppercase text-muted">1. Select Utility Type</label>
+                <div class="d-grid gap-2">
+                  <div class="utility-option">
+                    <input type="radio" name="utilityType" id="elec" value="ELECTRICITY" 
+                           [(ngModel)]="newConnection.utilityType" (change)="onUtilityChange()" class="btn-check">
+                    <label class="btn btn-outline-light text-dark w-100 text-start p-3 border shadow-sm rounded-3 d-flex align-items-center justify-content-between" for="elec">
+                      <span><i class="bi bi-lightning-charge-fill text-warning me-2"></i> Electricity</span>
+                      <i class="bi bi-chevron-right text-muted small"></i>
+                    </label>
+                  </div>
+
+                  <div class="utility-option">
+                    <input type="radio" name="utilityType" id="water" value="WATER" 
+                           [(ngModel)]="newConnection.utilityType" (change)="onUtilityChange()" class="btn-check">
+                    <label class="btn btn-outline-light text-dark w-100 text-start p-3 border shadow-sm rounded-3 d-flex align-items-center justify-content-between" for="water">
+                      <span><i class="bi bi-droplet-fill text-info me-2"></i> Water</span>
+                      <i class="bi bi-chevron-right text-muted small"></i>
+                    </label>
+                  </div>
+
+                  <div class="utility-option">
+                    <input type="radio" name="utilityType" id="gas" value="GAS" 
+                           [(ngModel)]="newConnection.utilityType" (change)="onUtilityChange()" class="btn-check">
+                    <label class="btn btn-outline-light text-dark w-100 text-start p-3 border shadow-sm rounded-3 d-flex align-items-center justify-content-between" for="gas">
+                      <span><i class="bi bi-fire text-danger me-2"></i> Gas</span>
+                      <i class="bi bi-chevron-right text-muted small"></i>
+                    </label>
+                  </div>
+
+                  <div class="utility-option">
+                    <input type="radio" name="utilityType" id="internet" value="INTERNET" 
+                           [(ngModel)]="newConnection.utilityType" (change)="onUtilityChange()" class="btn-check">
+                    <label class="btn btn-outline-light text-dark w-100 text-start p-3 border shadow-sm rounded-3 d-flex align-items-center justify-content-between" for="internet">
+                      <span><i class="bi bi-wifi text-primary me-2"></i> Internet</span>
+                      <i class="bi bi-chevron-right text-muted small"></i>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-7">
+              <label class="form-label fw-bold small text-uppercase text-muted">2. Select Tariff Plan</label>
+              
+              <div *ngIf="!newConnection.utilityType" class="text-center py-5 text-muted bg-light rounded-3">
+                <i class="bi bi-arrow-left-circle fs-3 d-block mb-2 opacity-50"></i>
+                Please select a utility type first.
+              </div>
+
+              <div *ngIf="newConnection.utilityType" class="plan-grid-container" style="max-height: 400px; overflow-y: auto;">
+                
+                <div class="d-grid gap-2">
+                  <div *ngFor="let plan of availablePlans" 
+                       class="plan-card p-3 border rounded-3 cursor-pointer"
+                       [class.active-plan]="newConnection.tariffCategory === plan.name"
+                       (click)="selectPlan(plan.name)">
+                    
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h6 class="fw-bold mb-1">{{ plan.name }}</h6>
+                        <p class="text-muted small mb-0">{{ plan.description }}</p>
+                      </div>
+                      <div class="text-end">
+                        <span class="badge bg-light text-dark border">{{ plan.rateLabel }}</span>
+                        <div class="mt-2" *ngIf="newConnection.tariffCategory === plan.name">
+                          <i class="bi bi-check-circle-fill text-primary"></i>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="border-top pt-3 mt-4 text-end">
+            <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary px-4" 
+                    [disabled]="isSubmitting || !newConnection.utilityType || !newConnection.tariffCategory">
+              <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+              Submit Application
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="success-overlay" *ngIf="showSuccessModal">
+  <div class="success-card shadow-lg">
+    <div class="p-3 bg-success-subtle rounded-3 mb-3">
+      <i class="bi bi-check-circle-fill text-success fs-1"></i>
+    </div>
+    <h4 class="fw-bold text-success mb-2">Application Received!</h4>
+    <p class="text-muted small mb-0">
+      Your request for a new connection has been submitted successfully.
+    </p>
+    <div class="mt-4">
+      <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+      <p class="text-secondary small fw-medium">
+        Updating list...
+      </p>
+    </div>
+  </div>
+</div>

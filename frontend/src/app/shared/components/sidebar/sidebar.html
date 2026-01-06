@@ -1,0 +1,134 @@
+<div class="sidebar d-flex flex-column flex-shrink-0 p-3 text-dark bg-white shadow-sm"
+     style="width: 260px; height: 100vh; position: fixed; z-index: 1000;">
+
+  <a [routerLink]="getDashboardRoute()" class="d-flex align-items-center mb-4 text-decoration-none px-2 pointer-cursor">
+    <i class="bi bi-lightning-charge-fill text-primary fs-3 me-2"></i>
+    <span class="fs-4 fw-bold text-dark" style="letter-spacing: -0.5px;">Utilix</span>
+  </a>
+
+  <hr class="text-secondary opacity-25">
+
+  <ul class="nav nav-pills flex-column mb-auto">
+    <ng-container *ngIf="isConsumer">
+      <li class="nav-item mb-1">
+        <a routerLink="/consumer/dashboard" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-grid me-3 fs-5"></i> Dashboard
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/consumer/connections" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-outlet me-3 fs-5"></i> My Connections
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/consumer/bills" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-receipt me-3 fs-5"></i> Bills
+        </a>
+      </li>
+    </ng-container>
+
+    <ng-container *ngIf="isOfficer">
+      <li class="nav-item mt-3 mb-2 px-2 text-uppercase text-muted small fw-bold" style="font-size: 0.75rem;">Officer Workspace</li>
+      <li class="nav-item mb-1">
+        <a routerLink="/officer/approvals" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark justify-content-between">
+          <span><i class="bi bi-check-circle me-3 fs-5"></i> Approvals</span>
+          <span *ngIf="workloadCount > 0" class="badge bg-danger rounded-pill">{{ workloadCount }}</span>
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/officer/billing-console" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-calculator me-3 fs-5"></i> Meter & Billing
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/officer/all-connections" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-hdd-network me-3 fs-5"></i> Connections
+        </a>
+      </li>
+    </ng-container>
+
+    <ng-container *ngIf="isAccounts">
+      <li class="nav-item mt-3 mb-2 px-2 text-uppercase text-muted small fw-bold" style="font-size: 0.75rem;">Finance</li>
+      <li class="nav-item mb-1">
+        <a routerLink="/accounts/dashboard" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-graph-up-arrow me-3 fs-5"></i> Dashboard
+        </a>
+      </li>
+       <li class="nav-item mb-1">
+        <a routerLink="/accounts/transactions" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-wallet2 me-3 fs-5"></i> Ledger
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/accounts/defaulters" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-exclamation-triangle me-3 fs-5"></i> Due Payments
+        </a>
+      </li>
+    </ng-container>
+
+    <ng-container *ngIf="isAdmin">
+      <li class="nav-item mt-3 mb-2 px-2 text-uppercase text-muted small fw-bold" style="font-size: 0.75rem;">Administration</li>
+      <li class="nav-item mb-1">
+        <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-speedometer2 me-3 fs-5"></i> Overview
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/admin/manage-users" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-person-gear me-3 fs-5"></i> User Management
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/admin/connections" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-hdd-network me-3 fs-5"></i> Connections
+        </a>
+      </li>
+      <li class="nav-item mb-1">
+        <a routerLink="/admin/tariffs" routerLinkActive="active" class="nav-link d-flex align-items-center text-dark">
+          <i class="bi bi-tags me-3 fs-5"></i> Tariff Management
+        </a>
+      </li>
+    </ng-container>
+  </ul>
+
+  <hr class="text-secondary opacity-25">
+  
+  <div class="dropdown">
+    <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+       id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+      <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2"
+           style="width: 32px; height: 32px;">
+        {{ username ? username.charAt(0).toUpperCase() : 'U' }}
+      </div>
+      <strong>{{ username || 'User' }}</strong>
+    </a>
+    <ul class="dropdown-menu text-small shadow" aria-labelledby="dropdownUser1">
+      <li><a class="dropdown-item" routerLink="/profile">Profile</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li>
+        <a class="dropdown-item text-danger" role="button" (click)="openLogoutModal()">Sign out</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-body p-4 text-center">
+        <div class="mb-3">
+          <div class="bg-danger-subtle text-danger rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+               style="width: 60px; height: 60px;">
+            <i class="bi bi-box-arrow-right fs-3"></i>
+          </div>
+        </div>
+        <h5 class="fw-bold mb-2">Sign Out?</h5>
+        <p class="text-muted mb-4">Are you sure you want to end your session?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button class="btn btn-light px-4 rounded-pill" (click)="closeLogoutModal()">Cancel</button>
+          <button class="btn btn-danger px-4 rounded-pill" (click)="confirmLogout()">Yes, Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

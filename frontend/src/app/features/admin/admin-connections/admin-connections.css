@@ -1,0 +1,11 @@
+.btn-white {
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  color: #333;
+}
+.btn-white:hover {
+  background-color: #f8f9fa;
+}
+.icon-square {
+  font-size: 1.1rem;
+}

@@ -1,0 +1,11 @@
+.bg-primary-subtle { background-color: #cfe2ff; }
+.bg-success-subtle { background-color: #d1e7dd; }
+.bg-danger-subtle  { background-color: #f8d7da; }
+.bg-warning-subtle { background-color: #fff3cd; }
+.bg-info-subtle    { background-color: #cff4fc; }
+.stat-card {
+  transition: transform 0.2s ease-in-out;
+}
+.stat-card:hover {
+  transform: translateY(-5px);
+}

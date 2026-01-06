@@ -1,0 +1,32 @@
+.extra-small {
+    font-size: 0.75rem;
+}
+
+.hover-card {
+    transition: all 0.3s ease;
+    border: 1px solid #eee !important;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+    border-color: #0d6efd !important;
+}
+
+.transition-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-white:hover {
+    background-color: #f8f9fa;
+    border-color: #0d6efd;
+    color: #0d6efd !important;
+}
+
+.badge {
+    font-weight: 600;
+}
+
+.table-sm {
+    font-size: 0.8rem;
+}

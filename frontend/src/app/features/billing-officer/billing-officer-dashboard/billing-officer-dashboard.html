@@ -1,0 +1,43 @@
+<div class="d-flex">
+  <app-sidebar></app-sidebar>
+
+  <div class="main-content w-100 bg-light min-vh-100" style="margin-left: 260px;">
+    <app-navbar [pageTitle]="'Officer Workspace'"></app-navbar>
+
+    <div class="container-fluid p-4">
+
+      <div class="d-flex justify-content-center mb-4">
+        <ul class="nav nav-pills bg-white p-2 rounded-pill shadow-sm">
+          <li class="nav-item">
+            <button
+              class="nav-link rounded-pill px-4 d-flex align-items-center gap-2"
+              [class.active]="activeTab === 'approvals'"
+              (click)="activeTab = 'approvals'">
+              <i class="bi bi-clipboard-check"></i>
+              <span>Approvals</span>
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button
+              class="nav-link rounded-pill px-4 d-flex align-items-center gap-2"
+              [class.active]="activeTab === 'billing'"
+              (click)="activeTab = 'billing'">
+              <i class="bi bi-receipt"></i>
+              <span>Meter & Billing</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="fade-in" *ngIf="activeTab === 'approvals'">
+        <app-connection-approvals></app-connection-approvals>
+      </div>
+
+      <div class="fade-in" *ngIf="activeTab === 'billing'">
+        <app-billing-console></app-billing-console>
+      </div>
+
+    </div>
+  </div>
+</div>
