@@ -4,7 +4,6 @@ import java.time.LocalDate;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -17,136 +16,166 @@ import com.utility.consumer.repository.ConnectionRepository;
 import com.utility.consumer.repository.ConsumerRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ConsumerServiceImpl implements ConsumerService{
 	private final ConsumerRepository consumerRepo;
-	private final ConnectionRepository connectionRepo;
-	private final KafkaTemplate<String, Object> kafkaTemplate;
-	
-	@Override
-	public Mono<ConsumerDTO> createProfile(ConsumerDTO dto) {
-		return consumerRepo.findByUserId(dto.getUserId())
-				.flatMap(existing-> Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Profile already exists")))
-				.switchIfEmpty(Mono.defer(() -> {
-					Consumer consumer = Consumer.builder()
-							.userId(dto.getUserId())
-							.firstName(dto.getFirstName())
-							.lastName(dto.getLastName())
-							.email(dto.getEmail())
-							.phoneNumber(dto.getPhoneNumber())
-							.address(dto.getAddress())
-							.active(true).build();
-					return consumerRepo.save(consumer);
-				}))
-				.cast(Consumer.class)
-				.map(this::mapToConsumerDTO);
-	}
-	
-	@Override
-	public Mono<ConsumerDTO> getProfile(String userId) {
-        return consumerRepo.findByUserId(userId)
-                .map(this::mapToConsumerDTO)
-                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found")));
+    private final ConnectionRepository connectionRepo;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    
+    private static final String STATUS_ACTIVE = "ACTIVE";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String NOTIFICATION_TOPIC = "notification-topic";
+    private static final String ADMIN_EMAIL = "yxsh2999@gmail.com";
+
+    @Override
+    public Mono<ConsumerDTO> createProfile(ConsumerDTO dto) {
+    	return consumerRepo.findByUserId(dto.getUserId())
+                .flatMap(existing -> Mono.<Consumer>error(new ResponseStatusException(HttpStatus.CONFLICT, "Profile already exists")))
+                .switchIfEmpty(Mono.defer(() -> consumerRepo.save(mapToEntity(dto))))
+                .map(this::mapToConsumerDTO);
     }
-	
-	@Override
-	public Mono<ConnectionDTO> requestConnection(ConnectionDTO dto) {
-        return consumerRepo.findById(dto.getConsumerId())
+
+    @Override
+    public Mono<ConsumerDTO> getProfile(String userId) {
+    	return consumerRepo.findByUserId(userId)
+                .map(this::mapToConsumerDTO);
+    }
+
+    @Override
+    public Mono<ConsumerDTO> updateProfile(ConsumerDTO dto) {
+    	return consumerRepo.findByUserId(dto.getUserId())
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found")))
+                .flatMap(existing -> {
+                    existing.setFirstName(dto.getFirstName());
+                    existing.setLastName(dto.getLastName());
+                    existing.setPhoneNumber(dto.getPhoneNumber());
+                    existing.setAddress(dto.getAddress());                    
+                    if (dto.getProfileImageUrl() != null) {
+                        existing.setProfileImageUrl(dto.getProfileImageUrl());
+                    }
+                    
+                    return consumerRepo.save(existing);
+                })
+                .map(this::mapToConsumerDTO);
+    }
+
+    @Override
+    public Mono<ConnectionDTO> requestConnection(ConnectionDTO dto) {
+    	return consumerRepo.findById(dto.getConsumerId())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Consumer not found")))
                 .flatMap(consumer -> {
                     Connection connection = Connection.builder()
                             .consumerId(consumer.getId())
                             .utilityType(dto.getUtilityType())
                             .tariffCategory(dto.getTariffCategory())
-                            .status("PENDING")
+                            .status(STATUS_PENDING)
                             .connectionDate(LocalDate.now())
                             .build();
                     return connectionRepo.save(connection);
                 })
                 .map(this::mapToConnectionDTO);
     }
-	
-	@Override
-	public Mono<ConnectionDTO> approveConnection(String connectionId, String meterNumber) {
-		return connectionRepo.findById(connectionId)
-	            .flatMap(connection -> {	                
-	                connection.setStatus("ACTIVE");
-	                connection.setMeterNumber(meterNumber);	                
-	                return connectionRepo.save(connection).doOnSuccess(savedConn -> {
-	                    EmailRequest email = new EmailRequest(
-	                        "yxsh2999@gmail.com",
-	                        "Connection Approved",
-	                        "Your connection for " + savedConn.getUtilityType() 
-	                        + " is now ACTIVE. Meter: " + savedConn.getMeterNumber()
-	                    );
-	                    kafkaTemplate.send("notification-topic", email);
-	                });
-	            })
-	            .map(this::mapToConnectionDTO);
-	    }
-	
-	@Override
-	public Flux<ConnectionDTO> getConnectionsByConsumer(String consumerId) {
-        return connectionRepo.findAllByConsumerId(consumerId)
-                .map(this::mapToConnectionDTO);
-    }
-	
-	@Override
-    public Flux<ConsumerDTO> getAllConsumers() {
-        return consumerRepo.findAll()
-                .map(this::mapToConsumerDTO);
-    }
-	
-	@Override
-    public Mono<ConnectionDTO> getConnectionById(String connectionId) {
-        return connectionRepo.findById(connectionId)
+
+    @Override
+    public Mono<ConnectionDTO> approveConnection(String connectionId, String meterNumber) {
+    	return connectionRepo.findById(connectionId)
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Connection not found")))
                 .flatMap(connection -> {
-                    return consumerRepo.findById(connection.getConsumerId())
-                            .map(consumer -> {
-                                ConnectionDTO dto = mapToConnectionDTO(connection);
-                                dto.setConsumerName(consumer.getFirstName() + " " + consumer.getLastName());
-                                return dto;
-                            })
-                            .defaultIfEmpty(mapToConnectionDTO(connection));
-                });
+                    connection.setStatus(STATUS_ACTIVE);
+                    connection.setMeterNumber(meterNumber);
+                    return connectionRepo.save(connection).doOnSuccess(savedConn -> {
+                        try {
+                            EmailRequest email = new EmailRequest(
+                                ADMIN_EMAIL,
+                                "Connection Approved",
+                                "Your connection for " + savedConn.getUtilityType() 
+                                + " is now " + STATUS_ACTIVE + ". Meter: " + savedConn.getMeterNumber()
+                            );
+                            kafkaTemplate.send(NOTIFICATION_TOPIC, email);
+                        } catch (Exception e) {
+                            log.error("Failed to send email: {}", e.getMessage());
+                        }
+                    });
+                })
+                .map(this::mapToConnectionDTO);
     }
 
     @Override
-    public Flux<ConnectionDTO> getAllConnections() {
-        return connectionRepo.findAll()
-                .flatMap(connection -> 
-                    consumerRepo.findById(connection.getConsumerId())
+    public Flux<ConnectionDTO> getConnectionsByConsumer(String consumerId) {
+    	return connectionRepo.findAllByConsumerId(consumerId)
+                .map(this::mapToConnectionDTO);
+    }
+
+    @Override
+    public Flux<ConsumerDTO> getAllConsumers() {
+    	return consumerRepo.findAll()
+                .map(this::mapToConsumerDTO);
+    }
+
+    @Override
+    public Mono<ConnectionDTO> getConnectionById(String connectionId) {
+        return connectionRepo.findById(connectionId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Connection not found")))
+                .flatMap(connection -> consumerRepo.findById(connection.getConsumerId())
                         .map(consumer -> {
                             ConnectionDTO dto = mapToConnectionDTO(connection);
                             dto.setConsumerName(consumer.getFirstName() + " " + consumer.getLastName());
                             return dto;
                         })
-                        .defaultIfEmpty(mapToConnectionDTO(connection))
-                );
+                        .defaultIfEmpty(mapToConnectionDTO(connection)));
     }
 
-    private ConsumerDTO mapToConsumerDTO(Consumer c) {
-        return ConsumerDTO.builder()
-                .id(c.getId()).userId(c.getUserId())
-                .firstName(c.getFirstName()).lastName(c.getLastName())
-                .email(c.getEmail()).address(c.getAddress())
-                .phoneNumber(c.getPhoneNumber())
-                .build();
+    @Override
+    public Flux<ConnectionDTO> getAllConnections() {
+        return connectionRepo.findAll()
+                .flatMap(connection -> consumerRepo.findById(connection.getConsumerId())
+                        .map(consumer -> {
+                            ConnectionDTO dto = mapToConnectionDTO(connection);
+                            dto.setConsumerName(consumer.getFirstName() + " " + consumer.getLastName());
+                            return dto;
+                        })
+                        .defaultIfEmpty(mapToConnectionDTO(connection)));
     }
 
     private ConnectionDTO mapToConnectionDTO(Connection c) {
         return ConnectionDTO.builder()
-                .id(c.getId()).consumerId(c.getConsumerId())
+                .id(c.getId())
+                .consumerId(c.getConsumerId())
                 .utilityType(c.getUtilityType())
                 .meterNumber(c.getMeterNumber())
                 .tariffCategory(c.getTariffCategory())
                 .status(c.getStatus())
                 .connectionDate(c.getConnectionDate())
+                .build();
+    }
+
+    private ConsumerDTO mapToConsumerDTO(Consumer c) {
+        return ConsumerDTO.builder()
+                .id(c.getId())
+                .userId(c.getUserId())
+                .firstName(c.getFirstName())
+                .lastName(c.getLastName())
+                .email(c.getEmail())
+                .phoneNumber(c.getPhoneNumber())
+                .address(c.getAddress())
+                .profileImageUrl(c.getProfileImageUrl())
+                .build();
+    }
+
+    private Consumer mapToEntity(ConsumerDTO d) {
+        return Consumer.builder()
+                .userId(d.getUserId())
+                .firstName(d.getFirstName())
+                .lastName(d.getLastName())
+                .email(d.getEmail())
+                .phoneNumber(d.getPhoneNumber())
+                .address(d.getAddress())
                 .build();
     }
 }

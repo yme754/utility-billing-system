@@ -25,4 +25,5 @@ public class Consumer {
 	private String email;
 	private String address;
 	private boolean active;
+	private String profileImageUrl;
 }

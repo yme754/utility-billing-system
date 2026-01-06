@@ -11,4 +11,5 @@ public interface ConnectionService {
 	Flux<ConnectionDTO> getPendingConnections();
 	Mono<Connection> requestConnection(Connection connection);
 	Flux<Connection> getMyConnections(String consumerId);
+	Mono<Connection> updateConnectionStatus(String id, String newStatus);
 }

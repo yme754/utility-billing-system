@@ -21,4 +21,5 @@ public class ConsumerDTO {
     @Email(message = "Invalid email format")
 	private String email;
 	private String address;
+    private String profileImageUrl;
 }

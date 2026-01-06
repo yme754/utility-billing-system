@@ -13,7 +13,7 @@ public class TariffPlan {
     private String utilityType;
     private String category;
     private String billingType;
-    private String planName;      
+    private String planName;     
     private String description;   
     private Double baseRate;
     private Double fixedCharge;
