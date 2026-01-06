@@ -1,7 +1,6 @@
 package com.utility.meter.service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
