@@ -2,20 +2,17 @@ pipeline {
     agent any
 
     tools {
-        // MUST match the names you gave in "Global Tool Configuration"
         maven 'Maven-3.9' 
         jdk 'Java-17'
     }
 
     environment {
-        // Defines where the backend is located relative to root
         BACKEND_DIR = 'backend' 
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                // Pulls code from your GitHub repo
                 checkout scm
             }
         }
@@ -24,9 +21,7 @@ pipeline {
             steps {
                 script {
                     echo '--- Building Backend JAR ---'
-                    // Switch to backend directory and run maven build
                     dir("${BACKEND_DIR}") {
-                        // -DskipTests speeds it up; remove if you want to run tests
                         sh 'mvn clean package -DskipTests' 
                     }
                 }
