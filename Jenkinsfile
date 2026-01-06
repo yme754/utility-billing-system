@@ -28,11 +28,10 @@ pipeline {
             }
         }
 
-        stage('Verify JAR') {
+        stage('Verify JARs') {
             steps {
-                dir("${BACKEND_DIR}/target") {
-                    sh 'ls -l *.jar'
-                    echo '--- JAR File Successfully Built! ---'
+                dir("backend") {
+                    sh 'find . -name "*.jar" -ls' 
                 }
             }
         }
