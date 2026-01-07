@@ -1,5 +1,8 @@
 # Utilix – Reactive Utility Billing System
 
+**Frontend deployment:**  
+[Utilix](https://utilixxxx.netlify.app/home)
+
 **Tech Stack:**  
 Java 17 | Spring Boot 3.4.1 | WebFlux | Docker | Kafka | MongoDB | Angular 17 | Jenkins
 
