@@ -32,7 +32,6 @@ public class ConsumerController {
     private final ConnectionService connectionService;
     
     @PostMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
     public Mono<ResponseEntity<ConsumerDTO>> createProfile(@RequestBody ConsumerDTO consumerDTO) {
         return consumerService.createProfile(consumerDTO).map(ResponseEntity::ok);
     }

@@ -35,31 +35,52 @@ public class ConsumerServiceImpl implements ConsumerService{
 
     @Override
     public Mono<ConsumerDTO> createProfile(ConsumerDTO dto) {
-    	return consumerRepo.findByUserId(dto.getUserId())
-                .flatMap(existing -> Mono.<Consumer>error(new ResponseStatusException(HttpStatus.CONFLICT, "Profile already exists")))
+        return consumerRepo.findByUserId(dto.getUserId())
+                .flatMap(existing -> {
+                    updateEntityWithDto(existing, dto);
+                    return consumerRepo.save(existing);
+                })
                 .switchIfEmpty(Mono.defer(() -> consumerRepo.save(mapToEntity(dto))))
                 .map(this::mapToConsumerDTO);
     }
 
     @Override
     public Mono<ConsumerDTO> getProfile(String userId) {
-    	return consumerRepo.findByUserId(userId)
+        return consumerRepo.findByUserId(userId)
+                .map(this::mapToConsumerDTO)
+                .switchIfEmpty(Mono.defer(() -> autoCreateProfile(userId)));
+    }
+    
+    private Mono<ConsumerDTO> autoCreateProfile(String userId) {
+    	log.warn("Auto-creating empty profile for userId: {}. Registration Sync must have failed!", userId);
+        Consumer newConsumer = Consumer.builder()
+                .userId(userId)
+                .firstName("Update")
+                .lastName("Profile")
+                .phoneNumber("")
+                .email("")
+                .address("")
+                .active(true)
+                .profileImageUrl("")
+                .build();
+        return consumerRepo.save(newConsumer)
                 .map(this::mapToConsumerDTO);
     }
 
     @Override
     public Mono<ConsumerDTO> updateProfile(ConsumerDTO dto) {
-    	return consumerRepo.findByUserId(dto.getUserId())
+        return consumerRepo.findByUserId(dto.getUserId())
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found")))
                 .flatMap(existing -> {
                     existing.setFirstName(dto.getFirstName());
                     existing.setLastName(dto.getLastName());
                     existing.setPhoneNumber(dto.getPhoneNumber());
-                    existing.setAddress(dto.getAddress());                    
+                    existing.setAddress(dto.getAddress());
+                    existing.setEmail(dto.getEmail());
+                    existing.setActive(dto.isActive());
                     if (dto.getProfileImageUrl() != null) {
                         existing.setProfileImageUrl(dto.getProfileImageUrl());
                     }
-                    
                     return consumerRepo.save(existing);
                 })
                 .map(this::mapToConsumerDTO);
@@ -154,6 +175,18 @@ public class ConsumerServiceImpl implements ConsumerService{
                 .connectionDate(c.getConnectionDate())
                 .build();
     }
+    
+    private void updateEntityWithDto(Consumer existing, ConsumerDTO dto) {
+        existing.setFirstName(dto.getFirstName());
+        existing.setLastName(dto.getLastName());
+        existing.setPhoneNumber(dto.getPhoneNumber());
+        existing.setAddress(dto.getAddress());
+        existing.setEmail(dto.getEmail());
+        existing.setActive(dto.isActive());
+        if (dto.getProfileImageUrl() != null) {
+            existing.setProfileImageUrl(dto.getProfileImageUrl());
+        }
+    }
 
     private ConsumerDTO mapToConsumerDTO(Consumer c) {
         return ConsumerDTO.builder()
@@ -164,6 +197,7 @@ public class ConsumerServiceImpl implements ConsumerService{
                 .email(c.getEmail())
                 .phoneNumber(c.getPhoneNumber())
                 .address(c.getAddress())
+                .active(c.isActive()) 
                 .profileImageUrl(c.getProfileImageUrl())
                 .build();
     }
@@ -176,6 +210,8 @@ public class ConsumerServiceImpl implements ConsumerService{
                 .email(d.getEmail())
                 .phoneNumber(d.getPhoneNumber())
                 .address(d.getAddress())
+                .active(d.isActive())
+                .profileImageUrl(d.getProfileImageUrl())
                 .build();
     }
 }

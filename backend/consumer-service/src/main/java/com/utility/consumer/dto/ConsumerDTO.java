@@ -22,4 +22,5 @@ public class ConsumerDTO {
 	private String email;
 	private String address;
     private String profileImageUrl;
+    private boolean active;
 }

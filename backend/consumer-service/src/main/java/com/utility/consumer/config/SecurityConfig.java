@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeExchange(exchanges -> exchanges
                 		.pathMatchers(HttpMethod.GET, "/consumers/tariffs").permitAll()                 	    
                 	    .pathMatchers(HttpMethod.GET, "/consumers/count").permitAll()
+                	    .pathMatchers(HttpMethod.POST, "/consumers/profile").permitAll() 
                         .pathMatchers("/consumers/**").permitAll() 
                         .anyExchange().authenticated()
                 )
