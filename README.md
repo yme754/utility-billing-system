@@ -105,3 +105,10 @@ Implemented Jenkins pipeline and optimized for Docker.
 - **Automated Security:** Account status `INACTIVE` in the Auth Service immediately revoked all system access.  
 
 ---
+
+## Architrecture Diagram
+<div align="center">
+  <img 
+    alt="Architrecture Diagram"
+    src="https://github.com/user-attachments/assets/56575b92-cab7-492d-acf2-6d0f75d42fb0" />
+</div>
