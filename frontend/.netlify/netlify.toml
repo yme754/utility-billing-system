@@ -1,0 +1,47 @@
+functionsDirectory = "/Users/yaswithasakhamuri/Desktop/Chubb-Capstone/utility-billing-system/frontend/netlify/functions"
+functionsDirectoryOrigin = "ui"
+headers = []
+
+[functions]
+
+[functions."*"]
+
+[[plugins]]
+origin = "default"
+package = "@netlify/angular-runtime"
+
+[plugins.inputs]
+
+[build]
+publish = "/Users/yaswithasakhamuri/Desktop/Chubb-Capstone/utility-billing-system/frontend/dist/utility-billing-system-frontend/browser"
+publishOrigin = "inline"
+commandOrigin = "ui"
+base = "/Users/yaswithasakhamuri/Desktop/Chubb-Capstone/utility-billing-system/frontend"
+command = "npm run build"
+functions = "/Users/yaswithasakhamuri/Desktop/Chubb-Capstone/utility-billing-system/frontend/netlify/functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
