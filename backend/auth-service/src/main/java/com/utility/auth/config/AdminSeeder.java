@@ -32,12 +32,10 @@ public class AdminSeeder implements CommandLineRunner{
 
     @Override
     public void run(String... args) {
-        userRepo.findByUsername(adminUsername)
-                .switchIfEmpty(Mono.defer(this::createAdmin))
-                .subscribe(
-                    user -> log.info("System check: Admin user '{}' is present.", user.getUsername()),
-                    error -> log.error("Error during admin seeding: {}", error.getMessage())
-                );
+    	userRepo.findByUsername(adminUsername)
+        .switchIfEmpty(Mono.defer(this::createAdmin))
+        .doOnNext(user -> log.info("System check: Admin user '{}' is ready.", user.getUsername()))
+        .block(); 
     }
 
     private Mono<User> createAdmin() {

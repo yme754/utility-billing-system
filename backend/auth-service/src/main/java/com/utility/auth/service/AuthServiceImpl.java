@@ -1,11 +1,14 @@
 package com.utility.auth.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.utility.auth.dto.AuthRequest;
@@ -36,33 +39,46 @@ public class AuthServiceImpl implements AuthService{
     private static final String NOTIFICATION_TOPIC = "notification-topic";
     private static final String ADMIN_EMAIL = "yxsh2999@gmail.com";
     
+    private final WebClient.Builder webClientBuilder;
+    
     @Override
     public Mono<User> register(User user) {
-    	return userRepo.existsByUsername(user.getUsername())
-                .flatMap(usernameExists -> {
-                    if (Boolean.TRUE.equals(usernameExists)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken"));
-                    }
+        return userRepo.existsByUsername(user.getUsername())
+                .flatMap(exists -> {
+                    if (exists) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Username taken"));
                     return userRepo.existsByEmail(user.getEmail());
                 })
-                .flatMap(emailExists -> {
-                    if (Boolean.TRUE.equals(emailExists)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered"));
-                    }
-                    return userRepo.existsByPhoneNumber(user.getPhoneNumber());
-                })
-                .flatMap(phoneExists -> {
-                    if (Boolean.TRUE.equals(phoneExists)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already registered"));
-                    }
+                .flatMap(exists -> {
+                    if (exists) return Mono.error(new ResponseStatusException(HttpStatus.CONFLICT, "Email taken"));
                     user.setPassword(passwordEncoder.encode(user.getPassword()));
                     user.setRoles(List.of("ROLE_CONSUMER"));
                     user.setActive(false);
                     user.setStatus(STATUS_PENDING);
                     return userRepo.save(user);
                 })
+                .flatMap(savedUser -> syncToConsumerService(savedUser)) 
                 .doOnSuccess(this::sendRegistrationNotifications);
-        }
+    }
+    
+    private Mono<User> syncToConsumerService(User user) {
+        Map<String, Object> consumerDto = new HashMap<>();
+        consumerDto.put("userId", user.getId());
+        consumerDto.put("firstName", user.getFirstName());
+        consumerDto.put("lastName", user.getLastName());
+        consumerDto.put("email", user.getEmail());
+        consumerDto.put("phoneNumber", user.getPhoneNumber());
+        consumerDto.put("address", user.getAddress());
+        consumerDto.put("active", user.isActive());
+        return webClientBuilder.build()
+                .post()
+                .uri("http://CONSUMER-SERVICE/consumers/profile") 
+                .bodyValue(consumerDto)
+                .retrieve()
+                .bodyToMono(Object.class)
+                .then(Mono.just(user))
+                .doOnError(err -> log.error("Sync failed for {}: {}", user.getUsername(), err.getMessage()))
+                .onErrorResume(err -> Mono.just(user)); 
+    }
     
     @Override
     public Mono<AuthResponse> login(AuthRequest request) {
@@ -122,12 +138,12 @@ public class AuthServiceImpl implements AuthService{
                     user.setActive(true);
                     return userRepo.save(user);
                 })
+                .flatMap(this::syncToConsumerService) 
                 .doOnSuccess(user -> {
                     EmailRequest approvalMail = EmailRequest.builder()
-                            .to(ADMIN_EMAIL)
+                            .to(user.getEmail())
                             .subject("Account Approved - Utilix")
-                            .body("Great news " + user.getUsername() + "!\n\nYour account has been approved as " + user.getRoles().get(0) + 
-                                  ". You can now access all features.\n\nLogin now: http://localhost:4200/login")
+                            .body("Your account is now active as " + user.getRoles().get(0))
                             .build();
                     kafkaTemplate.send(NOTIFICATION_TOPIC, approvalMail);
                 })

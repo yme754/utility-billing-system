@@ -2,6 +2,7 @@ package com.utility.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -34,6 +35,7 @@ public class SecurityConfig {
                 .pathMatchers("/auth/login", "/auth/register", "/auth/validate").permitAll()
                 .pathMatchers("/auth/admin/**").hasRole("ADMIN")
                 .pathMatchers("/consumers/count").permitAll()
+                .pathMatchers(HttpMethod.POST, "/consumers/profile").permitAll() 
                 .anyExchange().authenticated()
             )
             .authenticationManager(authenticationManager)
