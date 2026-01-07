@@ -18,7 +18,8 @@ All backend services were independently deployable, communicated via Reactive Mo
 ---
 
 ## Utilix Dashboard
-Below is the home page of the Utilix application.
+Below image is the **Home Page** of the Utilix application.<br>
+For remaining UI screens, refer **`Utilix Outputs.pdf`** included in this repository.
 
 <div align="center">
   <img 
