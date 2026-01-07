@@ -284,9 +284,16 @@ public class BillingServiceImpl implements BillingService{
                 }).then();
     }
 
-    @Override public Flux<Bill> getPendingBills() { return billRepo.findByStatus(STATUS_UNPAID); }
-    @Override public Flux<Bill> getBillsByConnection(String cid) { return billRepo.findByConnectionId(cid); }
+    @Override public Flux<Bill> getPendingBills() { 
+    	return billRepo.findByStatus(STATUS_UNPAID); 
+    }
+    
+    @Override public Flux<Bill> getBillsByConnection(String cid) { 
+    	return billRepo.findByConnectionId(cid); 
+    }
+    
     @Override public Mono<Void> updateBillStatus(String id, String s) { 
-        return billRepo.findById(id).flatMap(b -> { b.setStatus(s); return billRepo.save(b); }).then(); 
+        return billRepo.findById(id).flatMap(b -> { b.setStatus(s); 
+        return billRepo.save(b); }).then(); 
     }
 }
