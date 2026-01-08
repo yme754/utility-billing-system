@@ -1,0 +1,124 @@
+networks:
+  utility-network:
+    external: true
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_auth_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  consumer-service:
+    build: ./consumer-service
+    container_name: consumer-service
+    ports:
+      - "8082:8082"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_consumer_db
+      SPRING_DATA_MONGODB_DATABASE: utility_consumer_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  utility-service:
+    build: ./utility-service
+    container_name: utility-service
+    ports:
+      - "8083:8083"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_config_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  meter-service:
+    build: ./meter-service
+    container_name: meter-service
+    ports:
+      - "8085:8085"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_meter_db
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: org.apache.kafka.common.serialization.StringSerializer
+      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.springframework.kafka.support.serializer.JsonSerializer
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  billing-service:
+    build: ./billing-service
+    container_name: billing-service
+    ports:
+      - "8086:8086"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_billing_db
+      SPRING_DATA_MONGODB_DATABASE: utility_billing_db
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+      SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8087:8087"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8088:8088"
+    networks:
+      - utility-network
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/utility_payment_db
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
+      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: org.springframework.kafka.support.serializer.JsonSerializer
