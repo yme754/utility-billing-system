@@ -17,12 +17,13 @@ pipeline {
         }
 
         stage('Build Backend JAR') {
-            steps {
-                dir("${BACKEND_DIR}") {
-                    sh 'mvn clean package -DskipTests'
-                }
-            }
-        }
+    		steps {
+        		dir("backend") {
+            		sh 'mvn clean package -DskipTests'
+        		}
+    		}
+	}
+
 
         stage('Verify JARs') {
             steps {
