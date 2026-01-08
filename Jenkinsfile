@@ -1,29 +1,25 @@
 pipeline {
     agent any
 
+    environment {
+        PATH = "/usr/local/bin:${env.PATH}"
+        BACKEND_DIR = 'backend'
+    }
+
     tools {
         maven 'M3.9'
         jdk 'Java-17'
     }
 
-    environment {
-        BACKEND_DIR = 'backend'
-    }
-
     stages {
         stage('Checkout Code') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Build Backend JAR') {
             steps {
-                script {
-                    echo '--- Building Backend JAR ---'
-                    dir("${BACKEND_DIR}") {
-                        sh 'mvn clean package -DskipTests'
-                    }
+                dir("${BACKEND_DIR}") {
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -36,39 +32,30 @@ pipeline {
             }
         }
 
-	stage('Check Docker') {
-    		steps {
-        		sh 'which docker'
-        		sh 'docker --version'
-    		}
-	}
-
+        stage('Check Docker') {
+            steps {
+                sh 'which docker'
+                sh 'docker --version'
+            }
+        }
 
         stage('Run Infra with Docker Compose') {
             steps {
-                script {
-                    sh 'docker compose -f docker-compose-infra.yml build'
-                    sh 'docker compose -f docker-compose-infra.yml up -d'
-                }
+                sh 'docker compose -f docker-compose-infra.yml build'
+                sh 'docker compose -f docker-compose-infra.yml up -d'
             }
         }
 
         stage('Run Apps with Docker Compose') {
             steps {
-                script {
-                    sh 'docker compose -f docker-compose-apps.yml build'
-                    sh 'docker compose -f docker-compose-apps.yml up -d'
-                }
+                sh 'docker compose -f docker-compose-apps.yml build'
+                sh 'docker compose -f docker-compose-apps.yml up -d'
             }
         }
     }
 
     post {
-        success {
-            echo 'Pipeline Succeeded! JAR and Docker services are ready.'
-        }
-        failure {
-            echo 'Pipeline Failed. Check logs.'
-        }
+        success { echo 'Pipeline Succeeded! JAR and Docker services are ready.' }
+        failure { echo 'Pipeline Failed. Check logs.' }
     }
 }
