@@ -36,6 +36,14 @@ pipeline {
             }
         }
 
+	stage('Check Docker') {
+    		steps {
+        		sh 'which docker'
+        		sh 'docker --version'
+    		}
+	}
+
+
         stage('Run Infra with Docker Compose') {
             steps {
                 script {
