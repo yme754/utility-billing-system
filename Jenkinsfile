@@ -39,8 +39,8 @@ pipeline {
         stage('Run Infra with Docker Compose') {
             steps {
                 script {
-                    sh 'docker-compose -f docker-compose-infra.yml build'
-                    sh 'docker-compose -f docker-compose-infra.yml up -d'
+                    sh 'docker compose -f docker-compose-infra.yml build'
+                    sh 'docker compose -f docker-compose-infra.yml up -d'
                 }
             }
         }
@@ -48,8 +48,8 @@ pipeline {
         stage('Run Apps with Docker Compose') {
             steps {
                 script {
-                    sh 'docker-compose -f docker-compose-apps.yml build'
-                    sh 'docker-compose -f docker-compose-apps.yml up -d'
+                    sh 'docker compose -f docker-compose-apps.yml build'
+                    sh 'docker compose -f docker-compose-apps.yml up -d'
                 }
             }
         }
