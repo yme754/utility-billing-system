@@ -4,7 +4,9 @@ networks:
 
 services:
   api-gateway:
-    build: ./api-gateway
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -17,7 +19,9 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
   auth-service:
-    build: ./auth-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: auth-service
     ports:
       - "8081:8081"
@@ -31,7 +35,9 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
   consumer-service:
-    build: ./consumer-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: consumer-service
     ports:
       - "8082:8082"
@@ -46,7 +52,9 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
   utility-service:
-    build: ./utility-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: utility-service
     ports:
       - "8083:8083"
@@ -60,7 +68,9 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
   meter-service:
-    build: ./meter-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: meter-service
     ports:
       - "8085:8085"
@@ -77,7 +87,9 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
   billing-service:
-    build: ./billing-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: billing-service
     ports:
       - "8086:8086"
@@ -94,7 +106,9 @@ services:
       SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: org.apache.kafka.common.serialization.StringDeserializer
 
   notification-service:
-    build: ./notification-service
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: notification-service
     ports:
       - "8087:8087"
@@ -107,8 +121,9 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       JAVA_TOOL_OPTIONS: "-Xms128m -Xmx192m -XX:MaxMetaspaceSize=100m"
 
-  payment-service:
-    build: ./payment-service
+  payment-service:build: 
+      context: ./backend 
+      dockerfile: Dockerfilebuild: ./payment-service
     container_name: payment-service
     ports:
       - "8088:8088"

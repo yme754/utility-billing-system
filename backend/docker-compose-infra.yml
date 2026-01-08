@@ -56,7 +56,9 @@ services:
 
 
   discovery-server:
-    build: ./discovery-server
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: discovery-server
     ports:
       - "8761:8761"
@@ -73,7 +75,9 @@ services:
       start_period: 30s
 
   config-server:
-    build: ./config-server
+    build: 
+      context: ./backend 
+      dockerfile: Dockerfile
     container_name: config-server
     ports:
       - "8888:8888"
