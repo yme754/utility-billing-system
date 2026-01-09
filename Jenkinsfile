@@ -19,7 +19,7 @@ pipeline {
         stage('Build Backend JAR') {
     		steps {
         		dir("backend") {
-            			sh 'mvn clean package -DskipTests'
+            			sh 'mvn package -DskipTests'
         		}
     		}
 	}
