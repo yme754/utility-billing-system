@@ -80,7 +80,8 @@ Each service was:
 - **Feature:** Processing of bill payments via Transaction ID generation (TXN-...).
 
 ### 8. Messaging & Infrastructure
-- **Kafka (`:9092`):** Handled "Connection Approved" email notifications.  
+- **Kafka (`:9092`):** Acted as the message broker(the asynchronous communication channel).
+- **Notifcation Service (`:8087`):** Performed a specific action based on the data it receives.  
 - **Eureka (`:8761`):** Service Discovery.  
 - **Config Server (`:8888`):** Centralized properties management.  
 
