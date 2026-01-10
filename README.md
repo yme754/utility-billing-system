@@ -110,7 +110,7 @@ Implemented Jenkins pipeline and optimized for Docker.
 
 ## Architrecture Diagram
 <div align="center">
-  <img 
+  <img
     alt="Architrecture Diagram"
-    src="https://github.com/user-attachments/assets/56575b92-cab7-492d-acf2-6d0f75d42fb0" />
+    src="https://github.com/user-attachments/assets/4bf39fa0-1c6a-48bc-b2c8-33e873f57816" />
 </div>
