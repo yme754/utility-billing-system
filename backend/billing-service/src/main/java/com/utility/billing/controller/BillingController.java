@@ -1,5 +1,8 @@
 package com.utility.billing.controller;
 
+import java.time.LocalDateTime;
+import java.util.Map;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -86,6 +89,15 @@ private final BillingService billingService;
     @PreAuthorize("hasAnyRole('ACCOUNTS_OFFICER', 'ADMIN')")
     public Mono<ResponseEntity<Void>> sendReminder(@PathVariable String id) {
         return billingService.sendPaymentReminder(id)
+                .map(v -> ResponseEntity.ok().<Void>build());
+    }
+    
+    @PostMapping("/{id}/schedule-reminder")
+    @PreAuthorize("hasRole('CONSUMER')")
+    public Mono<ResponseEntity<Void>> scheduleUserReminder(@PathVariable String id, @RequestBody Map<String, String> payload) {
+        String timeString = payload.get("scheduledTime");
+        LocalDateTime scheduledTime = LocalDateTime.parse(timeString);
+        return billingService.scheduleUserReminder(id, scheduledTime)
                 .map(v -> ResponseEntity.ok().<Void>build());
     }
 }

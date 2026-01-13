@@ -40,4 +40,6 @@ public class Bill {
     private String tariffPlanName;
     private String paymentMode;
     private LocalDateTime paymentDate;
+    private LocalDateTime scheduledReminderTime;
+    private boolean reminderProcessed;
 }

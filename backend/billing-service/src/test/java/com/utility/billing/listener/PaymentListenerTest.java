@@ -28,7 +28,7 @@ class PaymentListenerTest {
     void setup() {
         billRepo = Mockito.mock(BillRepository.class);
         objectMapper = new ObjectMapper();
-        listener = new PaymentListener(billRepo, objectMapper);
+        listener = new PaymentListener(billRepo, objectMapper, null);
     }
 
     @Test

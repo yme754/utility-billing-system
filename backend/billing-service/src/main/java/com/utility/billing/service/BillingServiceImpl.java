@@ -2,11 +2,14 @@ package com.utility.billing.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -43,6 +46,8 @@ public class BillingServiceImpl implements BillingService{
     private static final String ADMIN_EMAIL = "yxsh2999@gmail.com";
     private static final String TYPE_SUBSCRIPTION = "SUBSCRIPTION";
     private static final String TYPE_METERED = "METERED";
+    
+    private static final ZoneId IST_ZONE = ZoneId.of("Asia/Kolkata");
 
     @Override
     public Mono<Bill> generateBill(String connectionId, String meterId, String utilityName, String token) {
@@ -97,10 +102,9 @@ public class BillingServiceImpl implements BillingService{
         double taxPercent = tariff.getTaxPercentage() != null ? tariff.getTaxPercentage() : 0.0;
         double taxAmount = (energyCharge + fixedCost) * (taxPercent / 100);
         
-        double baseAmount = energyCharge + fixedCost + taxAmount;
-        
-        LocalDate today = LocalDate.now();
-        LocalDate dueDate = today.plusDays(30);          
+        double baseAmount = energyCharge + fixedCost + taxAmount;        
+        LocalDate today = LocalDate.now(IST_ZONE);
+        LocalDate dueDate = today.plusDays(30);           
         
         double lateFee = tariff.getLateFeePerDay() != null ? tariff.getLateFeePerDay() : 0.0;
         int grace = tariff.getGracePeriodDays() != null ? tariff.getGracePeriodDays() : 0;
@@ -113,7 +117,7 @@ public class BillingServiceImpl implements BillingService{
                 .fixedCharge(fixedCost).taxAmount(taxAmount)
                 .amount(baseAmount)      
                 .fineAmount(0.0)          
-                .totalAmount(baseAmount)                  
+                .totalAmount(baseAmount)                   
                 .lateFeePerDay(lateFee)
                 .gracePeriod(grace)
                 .status(STATUS_UNPAID)
@@ -127,20 +131,35 @@ public class BillingServiceImpl implements BillingService{
         });
     }
 
-     double calculateEnergyCharge(double consumed, TariffDTO tariff) {
+    double calculateEnergyCharge(double consumed, TariffDTO tariff) {
         String type = tariff.getBillingType() != null ? tariff.getBillingType() : TYPE_METERED;        
-        if (TYPE_SUBSCRIPTION.equalsIgnoreCase(type)) {
-            return 0.0; 
-        }        
+        if (TYPE_SUBSCRIPTION.equalsIgnoreCase(type)) return 0.0;   
+        
+        if ("ON_DEMAND".equalsIgnoreCase(type)) {
+             double rate = tariff.getBaseRate() != null ? tariff.getBaseRate() : 0.0;
+             return consumed * rate;
+        }
+
         if (TYPE_METERED.equalsIgnoreCase(type)) {
             if (tariff.getSlabs() != null && !tariff.getSlabs().isEmpty()) {
-                double rate = tariff.getSlabs().stream()
+                return tariff.getSlabs().stream()
                     .filter(s -> consumed >= s.getMinUnits() && consumed <= s.getMaxUnits())
                     .findFirst()
-                    .map(s -> s.getRate() != null ? s.getRate() : (s.getRatePerUnit() != null ? s.getRatePerUnit() : 0.0))
-                    .orElse(0.0);
-                return consumed * rate;
-            } else {
+                    .map(s -> {
+                        double rate = s.getRate() != null ? s.getRate() : (s.getRatePerUnit() != null ? s.getRatePerUnit() : 0.0);
+                        return consumed * rate;
+                    })
+                    .orElseGet(() -> {
+                        return tariff.getSlabs().stream()
+                            .max(Comparator.comparingDouble(s -> s.getMaxUnits()))
+                            .map(s -> {
+                                double rate = s.getRate() != null ? s.getRate() : (s.getRatePerUnit() != null ? s.getRatePerUnit() : 0.0);
+                                return consumed * rate;
+                            })
+                            .orElse(0.0);
+                    });
+            } 
+            else {
                 return consumed * (tariff.getBaseRate() != null ? tariff.getBaseRate() : 0.0);
             }
         } 
@@ -152,13 +171,12 @@ public class BillingServiceImpl implements BillingService{
         if (STATUS_PAID.equals(bill.getStatus()) || STATUS_CANCELLED.equals(bill.getStatus())) {
             return Mono.just(bill);
         }
-        long daysLate = ChronoUnit.DAYS.between(bill.getDueDate(), LocalDate.now());         
+        
+        long daysLate = ChronoUnit.DAYS.between(bill.getDueDate(), LocalDate.now(IST_ZONE));              
         int grace = bill.getGracePeriod() != null ? bill.getGracePeriod() : 0;
         double finePerDay = bill.getLateFeePerDay() != null ? bill.getLateFeePerDay() : 0.0;
         double newFine = 0.0;
-        if (daysLate > grace) {
-            newFine = (daysLate - grace) * finePerDay;
-        }
+        if (daysLate > grace) newFine = (daysLate - grace) * finePerDay;
         double currentFine = bill.getFineAmount() != null ? bill.getFineAmount() : 0.0;
         if (Double.compare(newFine, currentFine) != 0) {
             bill.setFineAmount(newFine);
@@ -177,13 +195,12 @@ public class BillingServiceImpl implements BillingService{
     @Override
     public Mono<Void> cancelBill(String id, String reason) {
         return billRepo.findById(id)
-            .flatMap(bill -> {
-                if (STATUS_PAID.equals(bill.getStatus())) {
-                    return Mono.error(new RuntimeException("Cannot cancel a PAID bill"));
-                }
-                bill.setStatus(STATUS_CANCELLED);
-                return billRepo.save(bill);
-            }).then();
+                .flatMap(bill -> {
+                    if (STATUS_PAID.equals(bill.getStatus())) 
+                        return Mono.error(new RuntimeException("Cannot cancel a PAID bill"));
+                    bill.setStatus(STATUS_CANCELLED);
+                    return billRepo.save(bill);
+                }).then();
     }
 
     private void sendInvoiceNotification(Bill saved, double consumed, double total) {
@@ -249,23 +266,51 @@ public class BillingServiceImpl implements BillingService{
                 .flatMap(bill -> {
                     bill.setStatus(STATUS_PAID);
                     bill.setPaymentMode(paymentMode);
-                    bill.setPaymentDate(LocalDateTime.now());
-                    
+                    bill.setPaymentDate(LocalDateTime.now());                     
                     Transaction tx = Transaction.builder()
-                            .billId(bill.getId()).amount(bill.getTotalAmount())
-                            .paymentMode(paymentMode).status("SUCCESS")
+                            .billId(bill.getId())
+                            .amount(bill.getTotalAmount())
+                            .paymentMode(paymentMode)
+                            .status("SUCCESS")
                             .timestamp(LocalDateTime.now())
-                            .transactionReference("TXN-" + System.currentTimeMillis()).build();
-                    return transactionRepo.save(tx).then(billRepo.save(bill));
+                            .transactionReference("TXN-" + System.currentTimeMillis())
+                            .build();                     
+                    return transactionRepo.save(tx)
+                            .flatMap(savedTx -> billRepo.save(bill))
+                            .doOnSuccess(savedBill -> {
+                                sendPaymentSuccessEmail(savedBill, tx.getTransactionReference());
+                            });
                 }).then();
+    }
+    
+    private void sendPaymentSuccessEmail(Bill bill, String txnRef) {
+        try {
+            String body = "Dear Customer,\n\n" +
+                          "We have received your payment of ₹" + bill.getTotalAmount() + ".\n" +
+                          "Transaction Reference: " + txnRef + "\n\n" +
+                          "Thank you!";
+            EmailRequest email = EmailRequest.builder()
+                    .to(ADMIN_EMAIL) 
+                    .subject("Payment Successful - Utilix")
+                    .body(body)
+                    .isInvoice(false)
+                    .billId(bill.getId())
+                    .amount(bill.getTotalAmount())
+                    .build();
+                    
+            kafkaTemplate.send(NOTIFICATION_TOPIC, email);
+            log.info("Payment success email sent for bill: {}", bill.getId());
+        } catch (Exception e) {
+            log.error("Failed to send payment success email", e);
+        }
     }
     
     @Override
     public Mono<Void> sendPaymentReminder(String billId) {
         return billRepo.findById(billId)
                 .flatMap(bill -> {
-                    String userEmail = ADMIN_EMAIL; 
-                    LocalDate today = LocalDate.now();
+                    String userEmail = ADMIN_EMAIL;                     
+                    LocalDate today = LocalDate.now(IST_ZONE);
                     long daysDiff = ChronoUnit.DAYS.between(today, bill.getDueDate());
                     
                     String subject = daysDiff >= 0 ? "Reminder: Bill Due Soon" : "URGENT: Bill Overdue";
@@ -285,15 +330,60 @@ public class BillingServiceImpl implements BillingService{
     }
 
     @Override public Flux<Bill> getPendingBills() { 
-    	return billRepo.findByStatus(STATUS_UNPAID); 
+        return billRepo.findByStatus(STATUS_UNPAID); 
     }
     
     @Override public Flux<Bill> getBillsByConnection(String cid) { 
-    	return billRepo.findByConnectionId(cid); 
+        return billRepo.findByConnectionId(cid); 
     }
     
     @Override public Mono<Void> updateBillStatus(String id, String s) { 
         return billRepo.findById(id).flatMap(b -> { b.setStatus(s); 
         return billRepo.save(b); }).then(); 
+    }
+    
+    @Override
+    public Mono<Void> scheduleUserReminder(String billId, LocalDateTime scheduledTime) {
+        return billRepo.findById(billId)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found")))
+                .flatMap(bill -> {
+                    if (STATUS_PAID.equals(bill.getStatus())) {
+                        return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bill is already paid"));
+                    }
+                    bill.setScheduledReminderTime(scheduledTime);
+                    bill.setReminderProcessed(false);
+                    return billRepo.save(bill);
+                }).then();
+    }
+    
+    @Scheduled(fixedRate = 60000) 
+    public void processScheduledReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        billRepo.findByStatusAndScheduledReminderTimeLessThanAndReminderProcessedFalse(STATUS_UNPAID, now)
+                .flatMap(bill -> {
+                    String userEmail = ADMIN_EMAIL;
+                    String subject = "Scheduled Reminder: Utility Bill Payment";
+                    String body = "Hello, you requested a reminder to pay your bill of ₹" + bill.getTotalAmount() + 
+                                  " for connection " + bill.getConnectionId() + ". Please pay immediately to avoid service interruption.";
+
+                    EmailRequest email = EmailRequest.builder()
+                            .to(userEmail)
+                            .subject(subject)
+                            .body(body)
+                            .isInvoice(false)
+                            .billId(bill.getId())
+                            .amount(bill.getTotalAmount())
+                            .build();
+
+                    kafkaTemplate.send(NOTIFICATION_TOPIC, email);
+                    log.info("Processed reminder for Bill ID: {}", bill.getId());
+
+                    bill.setReminderProcessed(true);
+                    return billRepo.save(bill);
+                })
+                .subscribe(
+                    success -> log.debug("Reminder updated successfully"),
+                    error -> log.error("Error processing scheduled reminders: {}", error.getMessage())
+                );
     }
 }

@@ -1,5 +1,7 @@
 package com.utility.billing.service;
 
+import java.time.LocalDateTime;
+
 import com.utility.billing.dto.AdminStatsDTO;
 import com.utility.billing.dto.MeterReadingEvent;
 import com.utility.billing.entity.Bill;
@@ -19,4 +21,5 @@ public interface BillingService {
     Flux<Bill> getAllBills();
 	Mono<Void> cancelBill(String id, String reason);
 	Mono<Void> sendPaymentReminder(String billId);
+	Mono<Void> scheduleUserReminder(String billId, LocalDateTime scheduledTime);
 }

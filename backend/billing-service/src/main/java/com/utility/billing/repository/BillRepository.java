@@ -1,5 +1,7 @@
 package com.utility.billing.repository;
 
+import java.time.LocalDateTime;
+
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,7 @@ public interface BillRepository extends ReactiveMongoRepository<Bill, String>{
     Flux<Bill> findByConnectionId(String connectionId);
     Mono<Long> countByStatus(String status);
     Mono<Bill> findFirstByConnectionIdOrderByBillingDateDesc(String connectionId);
+    Flux<Bill> findByStatusAndScheduledReminderTimeLessThanAndReminderProcessedFalse(String status, LocalDateTime now);
     @Aggregation("{ $match: { status: 'PAID' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }")
     Mono<RevenueResult> sumTotalRevenue();
 
